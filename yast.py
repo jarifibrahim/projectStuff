@@ -3,7 +3,6 @@
 import re
 import argparse
 import os
-import tempfile
 
 
 def _utf8len(string):

@@ -16,11 +16,13 @@ except AttributeError:
 
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
+
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig, _encoding)
 except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
+
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -58,7 +60,8 @@ class Ui_MainWindow(object):
         self.buttonBox.setGeometry(QtCore.QRect(1100, 720, 156, 23))
         self.buttonBox.setMinimumSize(QtCore.QSize(156, 0))
         self.buttonBox.setMaximumSize(QtCore.QSize(16777215, 23))
-        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Close|QtGui.QDialogButtonBox.Save)
+        self.buttonBox.setStandardButtons(
+            QtGui.QDialogButtonBox.Close | QtGui.QDialogButtonBox.Save)
         self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
         self.groupBox = QtGui.QGroupBox(self.centralwidget)
         self.groupBox.setGeometry(QtCore.QRect(230, 90, 1041, 611))
@@ -79,8 +82,10 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName(_fromUtf8("scrollArea"))
         self.scrollAreaWidgetContents = QtGui.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1019, 579))
-        self.scrollAreaWidgetContents.setObjectName(_fromUtf8("scrollAreaWidgetContents"))
+        self.scrollAreaWidgetContents.setGeometry(
+            QtCore.QRect(0, 0, 1019, 579))
+        self.scrollAreaWidgetContents.setObjectName(
+            _fromUtf8("scrollAreaWidgetContents"))
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.groupBox_2 = QtGui.QGroupBox(self.centralwidget)
         self.groupBox_2.setGeometry(QtCore.QRect(10, 10, 1261, 61))
@@ -331,32 +336,42 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "YAST", None))
         self.groupBox.setTitle(_translate("MainWindow", "Output", None))
         self.groupBox_2.setTitle(_translate("MainWindow", "Filter", None))
-        self.Choose_toolButton.setText(_translate("MainWindow", "Choose", None))
-        self.groupBox_5.setTitle(_translate("MainWindow", "Sessionization", None))
+        self.Choose_toolButton.setText(
+            _translate("MainWindow", "Choose", None))
+        self.groupBox_5.setTitle(_translate(
+            "MainWindow", "Sessionization", None))
         self.Sstop_pushButton.setText(_translate("MainWindow", "Stop", None))
         self.Sstart_pushButton.setText(_translate("MainWindow", "Start", None))
-        self.groupBox_7.setTitle(_translate("MainWindow", "Enter Session Time", None))
+        self.groupBox_7.setTitle(_translate(
+            "MainWindow", "Enter Session Time", None))
         self.groupBox_6.setTitle(_translate("MainWindow", "Log Format", None))
-        self.comboBox.setItemText(0, _translate("MainWindow", "Proxy Log File", None))
-        self.comboBox.setItemText(1, _translate("MainWindow", "Web Log File", None))
-        self.comboBox.setItemText(2, _translate("MainWindow", "Squid Log File", None))
-        self.groupBox_3.setTitle(_translate("MainWindow", "Tokenization", None))
+        self.comboBox.setItemText(0, _translate(
+            "MainWindow", "Proxy Log File", None))
+        self.comboBox.setItemText(1, _translate(
+            "MainWindow", "Web Log File", None))
+        self.comboBox.setItemText(2, _translate(
+            "MainWindow", "Squid Log File", None))
+        self.groupBox_3.setTitle(_translate(
+            "MainWindow", "Tokenization", None))
         self.Tstart_pushButton.setText(_translate("MainWindow", "Start", None))
         self.Tstop_pushButton.setText(_translate("MainWindow", "Stop", None))
         self.groupBox_9.setTitle(_translate("MainWindow", "Status", None))
         self.groupBox_4.setTitle(_translate("MainWindow", "Clean", None))
         self.Cstart_pushButton.setText(_translate("MainWindow", "Start", None))
         self.Cstop_pushButton.setText(_translate("MainWindow", "Stop", None))
-        self.groupBox_8.setTitle(_translate("MainWindow", "To be Exclude", None))
+        self.groupBox_8.setTitle(_translate(
+            "MainWindow", "To be Exclude", None))
         self.toolBar.setWindowTitle(_translate("MainWindow", "toolBar", None))
         self.menuFile.setTitle(_translate("MainWindow", "File", None))
         self.menuHelp.setTitle(_translate("MainWindow", "Help", None))
         self.actionNew.setText(_translate("MainWindow", "New", None))
         self.actionOpen.setText(_translate("MainWindow", "Open", None))
         self.actionSave.setText(_translate("MainWindow", "Save", None))
-        self.actionSave_As.setText(_translate("MainWindow", "Save As...", None))
+        self.actionSave_As.setText(_translate(
+            "MainWindow", "Save As...", None))
         self.actionExit.setText(_translate("MainWindow", "Exit", None))
-        self.actionYAST_Help.setText(_translate("MainWindow", "YAST Help", None))
+        self.actionYAST_Help.setText(
+            _translate("MainWindow", "YAST Help", None))
 
 
 if __name__ == "__main__":
@@ -367,4 +382,3 @@ if __name__ == "__main__":
     ui.setupUi(MainWindow)
     MainWindow.show()
     sys.exit(app.exec_())
-
