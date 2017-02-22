@@ -904,7 +904,6 @@ c-24-20-163-223.client.comcast.net - - [09/Mar/2004:13:15:23 -0800] "GET /twiki/
 c-24-20-163-223.client.comcast.net - - [09/Mar/2004:13:15:33 -0800] "GET /twiki/bin/view/Main/SpamAssassinAndPostFix HTTP/1.1" 200 4034
 c-24-20-163-223.client.comcast.net - - [09/Mar/2004:13:15:49 -0800] "GET /twiki/bin/view/Main/SpamAssassinTaggingOnly HTTP/1.1" 200 5691
 c-24-20-163-223.client.comcast.net - - [09/Mar/2004:13:16:00 -0800] "GET /twiki/bin/view/Main/DCCAndPostFix HTTP/1.1" 200 5253
-h194n2fls308o1033.telia.com - - [09/Mar/2004:13:49:05 -0800] "-" 408 -
 h24-71-236-129.ca.shawcable.net - - [09/Mar/2004:14:43:02 -0800] "GET /mailman HTTP/1.1" 302 301
 h24-71-236-129.ca.shawcable.net - - [09/Mar/2004:14:43:03 -0800] "GET /mailman/listinfo HTTP/1.1" 200 6893
 h24-71-236-129.ca.shawcable.net - - [09/Mar/2004:14:43:04 -0800] "GET /icons/mailman.jpg HTTP/1.1" 304 -
