@@ -6,9 +6,21 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1315</width>
-    <height>851</height>
+    <width>1350</width>
+    <height>686</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>1350</width>
+    <height>686</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>1350</width>
+    <height>686</height>
+   </size>
   </property>
   <property name="mouseTracking">
    <bool>false</bool>
@@ -20,9 +32,9 @@
    <widget class="Line" name="line">
     <property name="geometry">
      <rect>
-      <x>0</x>
+      <x>-10</x>
       <y>70</y>
-      <width>1321</width>
+      <width>1461</width>
       <height>20</height>
      </rect>
     </property>
@@ -79,8 +91,8 @@
    <widget class="Line" name="line_3">
     <property name="geometry">
      <rect>
-      <x>-60</x>
-      <y>700</y>
+      <x>220</x>
+      <y>520</y>
       <width>1381</width>
       <height>20</height>
      </rect>
@@ -104,38 +116,13 @@
      <enum>Qt::Horizontal</enum>
     </property>
    </widget>
-   <widget class="QDialogButtonBox" name="buttonBox">
-    <property name="geometry">
-     <rect>
-      <x>1100</x>
-      <y>720</y>
-      <width>156</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>156</width>
-      <height>0</height>
-     </size>
-    </property>
-    <property name="maximumSize">
-     <size>
-      <width>16777215</width>
-      <height>23</height>
-     </size>
-    </property>
-    <property name="standardButtons">
-     <set>QDialogButtonBox::Close|QDialogButtonBox::Save</set>
-    </property>
-   </widget>
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
       <x>230</x>
       <y>90</y>
-      <width>1041</width>
-      <height>611</height>
+      <width>1081</width>
+      <height>431</height>
      </rect>
     </property>
     <property name="minimumSize">
@@ -171,8 +158,8 @@
       <rect>
        <x>10</x>
        <y>20</y>
-       <width>1021</width>
-       <height>581</height>
+       <width>1061</width>
+       <height>401</height>
       </rect>
      </property>
      <property name="minimumSize">
@@ -195,8 +182,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>1019</width>
-        <height>579</height>
+        <width>1059</width>
+        <height>399</height>
        </rect>
       </property>
      </widget>
@@ -206,8 +193,8 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>10</y>
-      <width>1261</width>
+      <y>0</y>
+      <width>1301</width>
       <height>61</height>
      </rect>
     </property>
@@ -234,11 +221,14 @@
      <string>Filter</string>
     </property>
     <widget class="QLineEdit" name="lineEdit">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="geometry">
       <rect>
        <x>110</x>
        <y>30</y>
-       <width>1131</width>
+       <width>1181</width>
        <height>20</height>
       </rect>
      </property>
@@ -255,33 +245,14 @@
       </size>
      </property>
     </widget>
-    <widget class="QToolButton" name="Choose_toolButton">
+    <widget class="QPushButton" name="B_choose_file">
      <property name="geometry">
       <rect>
        <x>20</x>
        <y>30</y>
-       <width>71</width>
-       <height>19</height>
+       <width>75</width>
+       <height>23</height>
       </rect>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>71</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>19</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>11</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
      </property>
      <property name="text">
       <string>Choose</string>
@@ -289,12 +260,15 @@
     </widget>
    </widget>
    <widget class="QFrame" name="frame_3">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>500</y>
+      <y>460</y>
       <width>201</width>
-      <height>181</height>
+      <height>171</height>
      </rect>
     </property>
     <property name="minimumSize">
@@ -317,12 +291,12 @@
     </property>
     <widget class="QGroupBox" name="groupBox_5">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>20</y>
+       <y>10</y>
        <width>171</width>
        <height>151</height>
       </rect>
@@ -349,7 +323,7 @@
      <property name="title">
       <string>Sessionization</string>
      </property>
-     <widget class="QPushButton" name="Sstop_pushButton">
+     <widget class="QPushButton" name="B_SStop">
       <property name="geometry">
        <rect>
         <x>90</x>
@@ -374,7 +348,7 @@
        <string>Stop</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="Sstart_pushButton">
+     <widget class="QPushButton" name="B_SStart">
       <property name="geometry">
        <rect>
         <x>10</x>
@@ -424,52 +398,53 @@
        <enum>Qt::Horizontal</enum>
       </property>
      </widget>
-     <widget class="QGroupBox" name="groupBox_7">
+     <widget class="QLabel" name="label_3">
       <property name="geometry">
        <rect>
-        <x>10</x>
-        <y>80</y>
-        <width>151</width>
-        <height>61</height>
+        <x>20</x>
+        <y>70</y>
+        <width>111</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Session Time:</string>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="spinBox">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>100</y>
+        <width>71</width>
+        <height>22</height>
        </rect>
       </property>
       <property name="minimumSize">
        <size>
-        <width>151</width>
+        <width>71</width>
         <height>0</height>
        </size>
       </property>
       <property name="maximumSize">
        <size>
         <width>16777215</width>
-        <height>61</height>
+        <height>22</height>
        </size>
       </property>
-      <property name="title">
-       <string>Enter Session Time</string>
+     </widget>
+     <widget class="QLabel" name="label">
+      <property name="geometry">
+       <rect>
+        <x>100</x>
+        <y>100</y>
+        <width>31</width>
+        <height>16</height>
+       </rect>
       </property>
-      <widget class="QSpinBox" name="spinBox">
-       <property name="geometry">
-        <rect>
-         <x>30</x>
-         <y>20</y>
-         <width>71</width>
-         <height>22</height>
-        </rect>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>71</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>16777215</width>
-         <height>22</height>
-        </size>
-       </property>
-      </widget>
+      <property name="text">
+       <string>Min.</string>
+      </property>
      </widget>
     </widget>
    </widget>
@@ -505,7 +480,7 @@
       <rect>
        <x>10</x>
        <y>0</y>
-       <width>161</width>
+       <width>171</width>
        <height>71</height>
       </rect>
      </property>
@@ -536,7 +511,7 @@
        <rect>
         <x>20</x>
         <y>30</y>
-        <width>111</width>
+        <width>141</width>
         <height>22</height>
        </rect>
       </property>
@@ -628,7 +603,7 @@
      <property name="title">
       <string>Tokenization</string>
      </property>
-     <widget class="QPushButton" name="Tstart_pushButton">
+     <widget class="QPushButton" name="B_TStart">
       <property name="geometry">
        <rect>
         <x>10</x>
@@ -653,7 +628,7 @@
        <string>Start</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="Tstop_pushButton">
+     <widget class="QPushButton" name="B_TStop">
       <property name="geometry">
        <rect>
         <x>90</x>
@@ -679,39 +654,6 @@
       </property>
      </widget>
     </widget>
-   </widget>
-   <widget class="QGroupBox" name="groupBox_9">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>780</y>
-      <width>1271</width>
-      <height>61</height>
-     </rect>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>731</width>
-      <height>0</height>
-     </size>
-    </property>
-    <property name="maximumSize">
-     <size>
-      <width>16777215</width>
-      <height>61</height>
-     </size>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>11</pointsize>
-      <weight>75</weight>
-      <italic>false</italic>
-      <bold>true</bold>
-     </font>
-    </property>
-    <property name="title">
-     <string>Status</string>
-    </property>
    </widget>
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
@@ -768,7 +710,7 @@
       <x>10</x>
       <y>280</y>
       <width>191</width>
-      <height>191</height>
+      <height>171</height>
      </rect>
     </property>
     <property name="minimumSize">
@@ -796,7 +738,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>10</y>
+       <y>0</y>
        <width>171</width>
        <height>161</height>
       </rect>
@@ -823,7 +765,7 @@
      <property name="title">
       <string>Clean</string>
      </property>
-     <widget class="QPushButton" name="Cstart_pushButton">
+     <widget class="QPushButton" name="B_CStart">
       <property name="enabled">
        <bool>false</bool>
       </property>
@@ -851,7 +793,7 @@
        <string>Start</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="Cstop_pushButton">
+     <widget class="QPushButton" name="B_CStop">
       <property name="enabled">
        <bool>false</bool>
       </property>
@@ -879,46 +821,31 @@
        <string>Stop</string>
       </property>
      </widget>
-     <widget class="QGroupBox" name="groupBox_8">
+     <widget class="QLineEdit" name="lineEdit_2">
       <property name="enabled">
        <bool>false</bool>
       </property>
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>60</y>
-        <width>120</width>
-        <height>80</height>
+        <y>90</y>
+        <width>121</width>
+        <height>51</height>
        </rect>
       </property>
-      <property name="minimumSize">
-       <size>
-        <width>120</width>
-        <height>0</height>
-       </size>
+     </widget>
+     <widget class="QLabel" name="label_2">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>70</y>
+        <width>111</width>
+        <height>16</height>
+       </rect>
       </property>
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>80</height>
-       </size>
+      <property name="text">
+       <string>To Be Exclude:</string>
       </property>
-      <property name="title">
-       <string>To be Exclude</string>
-      </property>
-      <widget class="QLineEdit" name="lineEdit_2">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="geometry">
-        <rect>
-         <x>12</x>
-         <y>19</y>
-         <width>101</width>
-         <height>51</height>
-        </rect>
-       </property>
-      </widget>
      </widget>
     </widget>
    </widget>
@@ -951,7 +878,7 @@
     <property name="geometry">
      <rect>
       <x>0</x>
-      <y>270</y>
+      <y>260</y>
       <width>221</width>
       <height>16</height>
      </rect>
@@ -976,7 +903,7 @@
     <property name="geometry">
      <rect>
       <x>0</x>
-      <y>480</y>
+      <y>450</y>
       <width>221</width>
       <height>16</height>
      </rect>
@@ -997,6 +924,65 @@
      <enum>Qt::Horizontal</enum>
     </property>
    </widget>
+   <widget class="QPushButton" name="B_Close">
+    <property name="geometry">
+     <rect>
+      <x>1180</x>
+      <y>540</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Close</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="B_Save">
+    <property name="geometry">
+     <rect>
+      <x>1100</x>
+      <y>540</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Save</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_4">
+    <property name="geometry">
+     <rect>
+      <x>250</x>
+      <y>580</y>
+      <width>71</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>11</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Status :</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit_3">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>250</x>
+      <y>610</y>
+      <width>1041</width>
+      <height>20</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
   <widget class="QToolBar" name="toolBar">
    <property name="windowTitle">
@@ -1014,7 +1000,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1315</width>
+     <width>1350</width>
      <height>21</height>
     </rect>
    </property>
