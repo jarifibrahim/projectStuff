@@ -4,13 +4,15 @@ import re
 import argparse
 import os
 from sqlalchemy import create_engine, orm
-import db
+import datetime
+import models
 
 DB_NAME = "yast.db"
-
+DATETIME_FORMAT = '%d/%b/%Y:%H:%M:%S'
 engine = create_engine('sqlite:///./' + DB_NAME)
 Session = orm.sessionmaker(bind=engine)
 session = Session()
+
 
 def _utf8len(string):
     """
@@ -18,6 +20,7 @@ def _utf8len(string):
     :return: String length in bytes
     """
     return len(string.encode('utf-8'))
+
 
 class LogFile(object):
     """ Represents raw log file """
@@ -29,7 +32,7 @@ class LogFile(object):
         self.path = file_path
         try:
             self.file = open(file_path, "r")
-        except FileNotFoundError:
+        except (OSError, IOError):
             print("No such file or directory: ", file_path)
             exit(0)
 
@@ -67,23 +70,36 @@ class LogFile(object):
         if self.file_type == "APACHE_COMMON":
             for line in self.file:
                 item = line.split(" ")
-                # Remove '[' from date
-                item[4].replace('[', '')
-
+                # modelsemove '[' from date
+                datetime_string = item[3].replace('[', '')
                 # Remove ']' from timezone
-                item[5].replace(']', '')
+                timezone_string = item[4].replace(']', '')
 
                 # Remove '"' from request method
-                item[6].replace('"', '')
+                method_string = item[5].replace('"', '')
 
-                # Remove '"' from request URL
-                item[7].replace('"', '')
-                token = db.Token_common(
+                # Remove '"' from protocol
+                protocol_string = item[7].replace('"', '')
+
+                date_time = datetime.datetime.strptime(
+                    datetime_string, DATETIME_FORMAT)
+
+                # Try to convert bytes transferred to int
+                try:
+                    bytes_transferred = int(item[9])
+                except ValueError:
+                    bytes_transferred = 0
+
+                try:
+                    status_code = int(item[8])
+                except ValueError:
+                    status_code = 0
+                token = models.Token_common(
                     ip_address=item[0], user_identifier=item[1],
-                    user_id=item[2], date_time=item[3], time_zone=item[4],
-                    method=item[5], resource_requested=item[6],
-                    protocol=item[7], status_code=item[8],
-                    size_of_object=item[9])
+                    user_id=item[2], date_time=date_time,
+                    time_zone=timezone_string, method=method_string,
+                    resource_requested=item[6], protocol=protocol_string,
+                    status_code=status_code, size_of_object=bytes_transferred)
                 session.add(token)
             session.commit()
 
@@ -148,13 +164,13 @@ class SessionFile(object):
 
 
 class Yast:
-    
+
     def create_tables(self, log_file):
         if log_file.file_type == "APACHE_COMMON":
-            db.Token_common.__table__.create(engine)
+            models.Token_common.__table__.create(engine)
         elif log_file.file_type == "SQUID":
-            db.Token_squid.__table__.create(engine)
-    
+            models.Token_squid.__table__.create(engine)
+
     def run(self):
         parser = argparse.ArgumentParser(usage='%(prog)s INPUT [-h] [options]',
                                          description='Sessionizes the given file.')
