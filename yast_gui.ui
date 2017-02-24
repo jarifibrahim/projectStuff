@@ -186,6 +186,16 @@
         <height>399</height>
        </rect>
       </property>
+      <widget class="QTextEdit" name="textEdit">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>10</y>
+         <width>991</width>
+         <height>371</height>
+        </rect>
+       </property>
+      </widget>
      </widget>
     </widget>
    </widget>
