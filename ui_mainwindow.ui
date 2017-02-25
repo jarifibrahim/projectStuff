@@ -251,7 +251,7 @@
    </widget>
    <widget class="QFrame" name="session_frame">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="geometry">
      <rect>
@@ -281,7 +281,7 @@
     </property>
     <widget class="QGroupBox" name="session_groupBox">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="geometry">
       <rect>
@@ -315,7 +315,7 @@
      </property>
      <widget class="QPushButton" name="B_SStart">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -367,6 +367,9 @@
       </property>
      </widget>
      <widget class="QLabel" name="session_time_label">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
       <property name="geometry">
        <rect>
         <x>20</x>
@@ -514,6 +517,9 @@
     </widget>
    </widget>
    <widget class="QFrame" name="token_frame">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -600,7 +606,7 @@
    </widget>
    <widget class="QFrame" name="clean_frame">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="geometry">
      <rect>
@@ -630,7 +636,7 @@
     </property>
     <widget class="QGroupBox" name="clean_groupBox">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="geometry">
       <rect>
@@ -664,7 +670,7 @@
      </property>
      <widget class="QPushButton" name="B_CStart">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -692,7 +698,7 @@
      </widget>
      <widget class="QLineEdit" name="ignore_ext_lineEdit">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -719,7 +725,10 @@
        <bool>true</bool>
       </property>
      </widget>
-     <widget class="Line" name="session_seperator_2">
+     <widget class="Line" name="line_seperator">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="geometry">
        <rect>
         <x>0</x>
@@ -869,7 +878,7 @@
    </widget>
    <widget class="QLineEdit" name="status_lineEdit">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="geometry">
      <rect>
@@ -878,6 +887,9 @@
       <width>1041</width>
       <height>31</height>
      </rect>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
     </property>
    </widget>
   </widget>

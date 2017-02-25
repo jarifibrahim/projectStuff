@@ -19,6 +19,14 @@ class Token_common(Base):
     status_code = Column(Integer, index=True)
     size_of_object = Column(Integer)
 
+    def __str__(self):
+        return ("{: >20} {: >20} {: >20} {: >20} {: >20} {: >20} {: >20} "
+                "{: >20} {: >20} {: >20} {: >20}").format(
+            self.token_id, self.ip_address, self.user_identifier,
+            self.user_id, str(self.date_time), self.time_zone, self.method,
+            self.resource_requested, self.protocol, self.status_code,
+            self.size_of_object)
+
 
 '''
 class Token_combined(Base):

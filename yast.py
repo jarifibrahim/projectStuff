@@ -2,9 +2,11 @@
 
 import re
 import os
-from datetime.datetime import strptime
+from datetime import datetime
 import models
-from yast.settings import DATETIME_FORMAT, engine, session
+from settings import DATETIME_FORMAT, engine, session
+
+log_file = None
 
 
 class LogFile(object):
@@ -18,9 +20,11 @@ class LogFile(object):
         try:
             self.file = open(file_path, "r")
         except (OSError, IOError):
-            print("No such file or directory: ", file_path)
-            exit(0)
-        self.number_of_lines = 0
+            raise
+        self.file_type = self._file_type()
+        self.file_size = os.stat(self.path).st_size
+        self._number_of_lines = self._number_of_lines
+        self.file_name = self._file_name
 
     def filter_file(self, ignore_list):
         """
@@ -38,6 +42,7 @@ class LogFile(object):
     def tokenize(self):
         """
         Break the log file into tokens and insert them into the database
+        :return: Number of rows inserted
         """
         if self.file_type == "APACHE_COMMON":
             for line in self.file:
@@ -53,7 +58,7 @@ class LogFile(object):
                 # Remove '"' from protocol
                 protocol_string = item[7].replace('"', '')
 
-                date_time = strptime(
+                date_time = datetime.strptime(
                     datetime_string, DATETIME_FORMAT)
 
                 # Try to convert bytes transferred to int
@@ -74,9 +79,16 @@ class LogFile(object):
                     status_code=status_code, size_of_object=bytes_transferred)
                 session.add(token)
             session.commit()
+            return session.query(models.Token_common).count()
 
-    @property
-    def file_type(self):
+    def get_all_tokens(self):
+        """
+        Return all tokens in the database
+        """
+        if self.file_type == "APACHE_COMMON":
+            return session.query(models.Token_common).all()
+
+    def _file_type(self):
         """
         Returns log file type.
         :return: File type. Possible values "APACHE_COMMON" and "SQUID"
@@ -99,16 +111,17 @@ class LogFile(object):
                              "Server Log file.")
         return file_type
 
-    @property
-    def file_size(self):
-        return os.stat(self.path).st_size
-
-    @property
-    def file_name(self):
+    def _file_name(self):
         try:
             return self.path.split("/")[-1]
         except IndexError:
             return self.path
+
+    def _number_of_lines(self):
+        count = sum(1 for _ in self.file)
+        # Move file pointer to the start of the file
+        self.file.seek(0, 0)
+        return count
 
 
 class Yast:
@@ -117,8 +130,3 @@ class Yast:
             models.Token_common.__table__.create(engine)
         elif log_file.file_type == "SQUID":
             models.Token_squid.__table__.create(engine)
-
-    def start_tokenization(file_path):
-        log_file = LogFile(file_path)
-        Yast.create_tables(log_file)
-        log_file.tokenize()
