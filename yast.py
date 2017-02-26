@@ -3,9 +3,10 @@
 import re
 import os
 from datetime import datetime
-import models
+from models import Token_common
 import settings
 import atexit
+from sqlalchemy import or_
 
 log_file = None
 
@@ -30,11 +31,26 @@ class LogFile(object):
         Removes unnecessary entries from the log file based on the list of
         file formats in items list
         :param ignore_list: List of file extensions to be removed
+        :return: Number of rows deleted
         """
-        if self.type == settings.APACHE_COMMON:
-            models.Token_common
-            pass
-        elif self.type == settings.SQUID:
+
+        # Ignore criteria
+        status_code = settings.ignore_criteria['status_code']
+        # Request method
+        method = settings.ignore_criteria['method']
+        min_size = settings.ignore_criteria['size_of_object']
+
+        if self.file_type == settings.APACHE_COMMON:
+            del_count = settings.session.query(Token_common).filter(
+                or_(Token_common.status_code != status_code,
+                    ~Token_common.method.in_(method),
+                    Token_common.request_ext.in_(ignore_list),
+                    Token_common.size_of_object <= min_size)
+            ).delete(synchronize_session='fetch')
+            settings.session.commit()
+            return del_count
+
+        elif self.file_type == settings.SQUID:
             pass
 
     def tokenize(self):
@@ -53,6 +69,9 @@ class LogFile(object):
                 # Remove '"' from request method
                 method_string = item[5].replace('"', '')
 
+                # Requested URL extension
+                request_ext = item[6].split(".")[-1]
+
                 # Remove '"' from protocol
                 protocol_string = item[7].replace('"', '')
 
@@ -69,22 +88,23 @@ class LogFile(object):
                     status_code = int(item[8])
                 except ValueError:
                     status_code = 0
-                token = models.Token_common(
+                token = Token_common(
                     ip_address=item[0], user_identifier=item[1],
                     user_id=item[2], date_time=date_time,
                     time_zone=timezone_string, method=method_string,
-                    resource_requested=item[6], protocol=protocol_string,
-                    status_code=status_code, size_of_object=bytes_transferred)
+                    resource_requested=item[6], request_ext=request_ext,
+                    protocol=protocol_string, status_code=status_code,
+                    size_of_object=bytes_transferred)
                 settings.session.add(token)
             settings.session.commit()
-            return settings.session.query(models.Token_common).count()
+            return settings.session.query(Token_common).count()
 
     def get_all_tokens(self):
         """
         Return all tokens in the database
         """
         if self.file_type == settings.APACHE_COMMON:
-            return settings.session.query(models.Token_common).all()
+            return settings.session.query(Token_common).all()
 
     def _file_type(self):
         """

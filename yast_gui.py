@@ -27,6 +27,7 @@ class YastGui(QtGui.QMainWindow):
         self.ui.B_Close.clicked.connect(self.close_application)
         self.ui.B_Save.clicked.connect(self.file_save)
         self.ui.B_TStart.clicked.connect(self.start_tokenization)
+        self.ui.B_CStart.clicked.connect(self.start_cleaning)
         self.ui.actionOpen.triggered.connect(self.choose_file)
         self.ui.actionOpen.setShortcut("ctrl+O")
         self.ui.actionSave_As.triggered.connect(self.file_save)
@@ -117,6 +118,7 @@ class YastGui(QtGui.QMainWindow):
         Helper method to print output to the output_textEdit
         :param _type: Type of operation. Possible values TOKEN and SESSION
         """
+        self.ui.output_textEdit.setText("")
         if _type == "TOKEN":
             if self.log_file.file_type == settings.APACHE_COMMON:
                 heading = settings.APACHE_COMMON_HEADING
@@ -129,6 +131,28 @@ class YastGui(QtGui.QMainWindow):
                 pass
         elif _type == "SESSION":
             pass
+
+    def start_cleaning(self):
+        ignore_text = self.ui.ignore_ext_lineEdit.text()
+        msg = "Log Filtering in progress. Please wait..."
+        self.ui.status_lineEdit.setText(msg)
+        QtGui.QMessageBox.information(
+            self.ui.centralwidget, "YAST - Processing Started", msg)
+
+        try:
+            ignore_list = ignore_text.split(",")
+        except Exception:
+            QtGui.QMessageBox.critical(self.ui.centralwidget, "YAST - Error",
+                                       "Invalid ignore list. Please add all "
+                                       "file extensions seperated by comman")
+        del_count = self.log_file.filter_file(ignore_list)
+
+        self.print_output("TOKEN")
+        msg = "Log Filtering completed successfully. Deleted %s entries."\
+            "\nYou can now sessionize the log file." % del_count
+        self.ui.status_lineEdit.setText(msg)
+        QtGui.QMessageBox.information(
+            self.ui.centralwidget, "YAST - Processing Started", msg)
 
 
 def main():

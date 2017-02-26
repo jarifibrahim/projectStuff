@@ -25,3 +25,13 @@ APACHE_COMMON_LOG_RE = '([0-9\.]+)([\w\. \-]+)\s(\[.+])\s".+"\s\d{3}.+'
 
 SQUID = 2
 SQUID_LOG_RE = '\d+\.\d+\s+\d+\s+([0-9\.]+)\s\w{1,8}\/\d{3}\s\d+.+'
+
+
+ignore_criteria = {
+    # Entries with status code other than 200 will be ignored
+    'status_code': 200,
+    # Entries with request method other than following will be ignored
+    'method': ["GET", "POST"],
+    # Entries with size of object less than following value willbe ignored
+    'size_of_object': 0
+}
