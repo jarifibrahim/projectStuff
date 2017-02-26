@@ -1,10 +1,8 @@
 from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
+import settings
 
 
-class Token_common(Base):
+class Token_common(settings.Base):
     __tablename__ = 'Token_common'
 
     token_id = Column(Integer, primary_key=True)
@@ -20,12 +18,11 @@ class Token_common(Base):
     size_of_object = Column(Integer)
 
     def __str__(self):
-        return ("{: >20} {: >20} {: >20} {: >20} {: >20} {: >20} {: >20} "
-                "{: >20} {: >20} {: >20} {: >20}").format(
+        return settings.APACHE_COMMON_OUTPUT_FORMAT.format(
             self.token_id, self.ip_address, self.user_identifier,
             self.user_id, str(self.date_time), self.time_zone, self.method,
-            self.resource_requested, self.protocol, self.status_code,
-            self.size_of_object)
+            self.status_code, self.size_of_object, self.protocol,
+            self.resource_requested)
 
 
 '''

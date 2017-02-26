@@ -1,7 +1,8 @@
 from PyQt4 import QtGui
 from ui_mainwindow import Ui_MainWindow
 import sys
-from yast import Yast, LogFile
+import settings
+from yast import LogFile
 
 
 class YastGui(QtGui.QMainWindow):
@@ -39,16 +40,19 @@ class YastGui(QtGui.QMainWindow):
         if not fname:
             return
         self.ui.file_path_textEdit.setText(fname)
-        self.ui.token_frame.setEnabled(True)
         self.ui.status_lineEdit.setText("Please start Tokenization.")
+        self.ui.token_frame.setEnabled(True)
+        self.ui.clean_frame.setEnabled(False)
+        self.ui.session_frame.setEnabled(False)
 
     def close_application(self):
+        """ Exit event handler """
         choice = QtGui.QMessageBox.warning(
             self.ui.centralwidget, "YAST - Warning!",
             "Do you really want to Exit?",
             QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
         if choice == QtGui.QMessageBox.Yes:
-            sys.exit()
+            raise SystemExit
 
     def file_save(self):
         name = QtGui.QFileDialog.getSaveFileName(
@@ -59,21 +63,25 @@ class YastGui(QtGui.QMainWindow):
 
         file.close()
 
+    def init_tokenization(self):
+        """ Initializes tokenization """
+        # Drop all existing tables
+        settings.Base.metadata.drop_all(settings.engine)
+        # create new tables
+        settings.Base.metadata.create_all(settings.engine)
+        msg = "Tokenization in progress. Please wait..."
+        self.ui.status_lineEdit.setText(msg)
+        QtGui.QMessageBox.information(
+            self.ui.centralwidget, "YAST - Processing Started", msg)
+
     def start_tokenization(self):
         """
         On click event handler for Tokenization start button
         """
-        self.ui.status_lineEdit.setText("")
-        msg = "Tokenization in progress. Please wait..."
-        QtGui.QMessageBox.information(
-            self.ui.centralwidget, "YAST - Processing Started", msg)
-        self.ui.status_lineEdit.setText(msg)
-
+        self.init_tokenization()
         file_name = self.ui.file_path_textEdit.text()
         try:
             self.log_file = LogFile(file_name)
-            # Create initial db tables
-            Yast.create_tables(self.log_file)
             rows_count = self.log_file.tokenize()
         except (OSError, IOError):
             msg = "File not found or you do not have permission to access the"\
@@ -82,20 +90,45 @@ class YastGui(QtGui.QMainWindow):
                 self.ui.centralwidget, "YAST - Error", msg)
             self.ui.token_frame.setEnabled(False)
             return
+        except Exception as e:
+            QtGui.QMessageBox.critical(
+                self.ui.centralwidget, "Yast - Error", str(e))
+            self.ui.token_frame.setEnabled(False)
+            return
+        self.end_tokenization(rows_count)
 
+    def end_tokenization(self, rows_count):
+        """ Post tokenization handler """
         self.ui.token_frame.setEnabled(False)
         self.ui.clean_frame.setEnabled(True)
         self.ui.session_frame.setEnabled(True)
 
-        # TODO: Output data from table to output_textEdit
-        # for item in self.log_file.get_all_tokens():
-        #    self.ui.output_textEdit.append(str(item))
+        # print output to textEdit
+        self.print_output("TOKEN")
 
         msg = "Tokenization completed. Successfully processed {} lines. "\
             "Please start clean or sessionization.".format(rows_count)
         self.ui.status_lineEdit.setText(msg)
         QtGui.QMessageBox.information(
             self.ui.centralwidget, "YAST - Processing Completed", msg)
+
+    def print_output(self, _type):
+        """
+        Helper method to print output to the output_textEdit
+        :param _type: Type of operation. Possible values TOKEN and SESSION
+        """
+        if _type == "TOKEN":
+            if self.log_file.file_type == settings.APACHE_COMMON:
+                heading = settings.APACHE_COMMON_HEADING
+                self.ui.output_textEdit.setText(heading)
+                # TODO: Output data from table to output_textEdit
+                all_tokens = self.log_file.get_all_tokens()
+                for item in all_tokens:
+                    self.ui.output_textEdit.append(str(item))
+            if self.log_file.file_type == settings.SQUID:
+                pass
+        elif _type == "SESSION":
+            pass
 
 
 def main():

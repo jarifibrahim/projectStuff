@@ -4,15 +4,14 @@ import re
 import os
 from datetime import datetime
 import models
-from settings import DATETIME_FORMAT, engine, session
+import settings
+import atexit
 
 log_file = None
 
 
 class LogFile(object):
     """ Represents the input log file """
-    squid_log_re = '\d+\.\d+\s+\d+\s+([0-9\.]+)\s\w{1,8}\/\d{3}\s\d+.+'
-    apache_common_log_re = '([0-9\.]+)([\w\. \-]+)\s(\[.+])\s".+"\s\d{3}.+'
 
     def __init__(self, file_path):
         super(LogFile, self).__init__()
@@ -28,15 +27,14 @@ class LogFile(object):
 
     def filter_file(self, ignore_list):
         """
-        Removes unnecessary entries from the log file
-        based on the list of file formats in items list
+        Removes unnecessary entries from the log file based on the list of
+        file formats in items list
         :param ignore_list: List of file extensions to be removed
         """
-
-        # Create new temporary file to store results
-        if self.type == 'APACHE':
+        if self.type == settings.APACHE_COMMON:
+            models.Token_common
             pass
-        elif self.type == 'SQUID':
+        elif self.type == settings.SQUID:
             pass
 
     def tokenize(self):
@@ -44,7 +42,7 @@ class LogFile(object):
         Break the log file into tokens and insert them into the database
         :return: Number of rows inserted
         """
-        if self.file_type == "APACHE_COMMON":
+        if self.file_type == settings.APACHE_COMMON:
             for line in self.file:
                 item = line.split(" ")
                 # modelsemove '[' from date
@@ -59,7 +57,7 @@ class LogFile(object):
                 protocol_string = item[7].replace('"', '')
 
                 date_time = datetime.strptime(
-                    datetime_string, DATETIME_FORMAT)
+                    datetime_string, settings.DATETIME_FORMAT)
 
                 # Try to convert bytes transferred to int
                 try:
@@ -77,32 +75,32 @@ class LogFile(object):
                     time_zone=timezone_string, method=method_string,
                     resource_requested=item[6], protocol=protocol_string,
                     status_code=status_code, size_of_object=bytes_transferred)
-                session.add(token)
-            session.commit()
-            return session.query(models.Token_common).count()
+                settings.session.add(token)
+            settings.session.commit()
+            return settings.session.query(models.Token_common).count()
 
     def get_all_tokens(self):
         """
         Return all tokens in the database
         """
-        if self.file_type == "APACHE_COMMON":
-            return session.query(models.Token_common).all()
+        if self.file_type == settings.APACHE_COMMON:
+            return settings.session.query(models.Token_common).all()
 
     def _file_type(self):
         """
         Returns log file type.
-        :return: File type. Possible values "APACHE_COMMON" and "SQUID"
+        :return: File type. Possible values APACHE_COMMON and SQUID
         """
         # Save original position
         orig = self.file.tell()
         line = self.file.readline()
         file_type = None
-        regex = re.compile(LogFile.squid_log_re)
+        regex = re.compile(settings.SQUID_LOG_RE)
         if regex.match(line):
-            file_type = 'SQUID'
-        regex = re.compile(LogFile.apache_common_log_re)
+            file_type = settings.SQUID
+        regex = re.compile(settings.APACHE_COMMON_LOG_RE)
         if regex.match(line):
-            file_type = 'APACHE_COMMON'
+            file_type = settings.APACHE_COMMON
         # Move cursor back to original
         self.file.seek(orig)
         if not file_type:
@@ -124,9 +122,13 @@ class LogFile(object):
         return count
 
 
-class Yast:
-    def create_tables(log_file):
-        if log_file.file_type == "APACHE_COMMON":
-            models.Token_common.__table__.create(engine)
-        elif log_file.file_type == "SQUID":
-            models.Token_squid.__table__.create(engine)
+class Utility:
+    @classmethod
+    def remove_db(cls):
+        try:
+            os.remove(settings.DB_NAME)
+        except FileNotFoundError:
+            pass
+
+
+atexit.register(Utility.remove_db)
