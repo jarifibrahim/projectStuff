@@ -57,11 +57,15 @@ class YastGui(QtGui.QMainWindow):
 
     def file_save(self):
         name = QtGui.QFileDialog.getSaveFileName(
-            self.ui.centralwidget, 'YAST - Save File')
+            self.ui.centralwidget, 'YAST - Save File',
+            filter="Comma seperated Variable File (*.csv)")
         file = open(name, 'w')
-
-        # TODO: Pull date from output_textedit and write to file
-
+        result = self.ui.output_textEdit.toPlainText()
+        # Replace all tab characters by comma
+        result = result.replace("\t", ",")
+        # Remove all white spaces
+        result = result.replace(" ", "")
+        file.write(result)
         file.close()
 
     def init_tokenization(self):
