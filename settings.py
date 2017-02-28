@@ -2,10 +2,10 @@ from sqlalchemy import create_engine, orm
 from sqlalchemy.ext.declarative import declarative_base
 
 
-DB_NAME = "yast.db"
 # Format of the datetime string in the log file
 DATETIME_FORMAT = '%d/%b/%Y:%H:%M:%S'
-engine = create_engine('sqlite:///./' + DB_NAME)
+# Create in-memory database
+engine = create_engine('sqlite:///:memory:')
 Session = orm.sessionmaker(bind=engine)
 session = Session()
 Base = declarative_base()

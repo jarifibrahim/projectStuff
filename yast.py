@@ -5,7 +5,6 @@ import os
 from datetime import datetime
 from models import Token_common
 import settings
-import atexit
 from sqlalchemy import or_
 
 log_file = None
@@ -66,6 +65,7 @@ class LogFile(object):
         """
         ui.progressBar.setMaximum(self.number_of_lines)
         if self.file_type == settings.APACHE_COMMON:
+            token_array = []
             for i, line in enumerate(self.file):
                 item = line.split(" ")
                 # modelsemove '[' from date
@@ -95,14 +95,13 @@ class LogFile(object):
                     status_code = int(item[8])
                 except ValueError:
                     status_code = 0
-                token = Token_common(
+                token_array.append(Token_common(
                     ip_address=item[0], user_identifier=item[1],
                     user_id=item[2], date_time=date_time,
                     time_zone=timezone_string, method=method_string,
                     resource_requested=item[6], request_ext=request_ext,
                     protocol=protocol_string, status_code=status_code,
-                    size_of_object=bytes_transferred)
-                settings.session.add(token)
+                    size_of_object=bytes_transferred))
 
                 # Calculate completion percentage
                 ui.progressBar.setValue(i + 1)
@@ -111,6 +110,7 @@ class LogFile(object):
                 msg[0] = str(i + 1)
                 ui.records_processed_value_label.setText("/".join(msg))
                 ui.records_processed_label.setText("Records processed")
+            settings.session.bulk_save_objects(token_array)
             settings.session.commit()
             self.total_db_records = self.db_entries_count()
 
@@ -163,15 +163,3 @@ class LogFile(object):
         # Move file pointer to the start of the file
         self.file.seek(0, 0)
         return count
-
-
-class Utility:
-    @classmethod
-    def remove_db(cls):
-        try:
-            os.remove(settings.DB_NAME)
-        except FileNotFoundError:
-            pass
-
-
-atexit.register(Utility.remove_db)

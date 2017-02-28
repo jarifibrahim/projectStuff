@@ -68,6 +68,8 @@ class YastGui(QtGui.QMainWindow):
         """ Initializes tokenization """
 
         self.ui.B_TStart.setEnabled(False)
+        self.ui.progressBar.setValue(0)
+        self.ui.records_processed_value_label.setText("0/0")
         # Drop all existing tables
         settings.Base.metadata.drop_all(settings.engine)
         # create new tables
@@ -136,6 +138,8 @@ class YastGui(QtGui.QMainWindow):
                 # TODO: Output data from table to output_textEdit
                 all_tokens = self.log_file.get_all_tokens()
                 for item in all_tokens:
+                    # This makes sure the Gui is refreshed after every loop
+                    QtGui.QApplication.processEvents()
                     self.ui.output_textEdit.append(str(item))
             if self.log_file.file_type == settings.SQUID:
                 pass
