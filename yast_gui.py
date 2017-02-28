@@ -1,4 +1,4 @@
-from PyQt4 import QtGui
+from PyQt4 import QtGui, QtCore
 from ui_mainwindow import Ui_MainWindow
 import sys
 import settings
@@ -68,66 +68,21 @@ class YastGui(QtGui.QMainWindow):
         file.write(result)
         file.close()
 
-    def init_tokenization(self):
-        """ Initializes tokenization """
-
-        self.ui.B_TStart.setEnabled(False)
-        self.ui.progressBar.setValue(0)
-        self.ui.records_processed_value_label.setText("0/0")
-        # Drop all existing tables
-        settings.Base.metadata.drop_all(settings.engine)
-        # create new tables
-        settings.Base.metadata.create_all(settings.engine)
-        msg = "Tokenization in progress. Please wait..."
-        self.ui.status_lineEdit.setText(msg)
-        msg = "Tokenization started."
-        QtGui.QMessageBox.information(
-            self.ui.centralwidget, "YAST - Processing Started", msg)
-
-        self.start_tokenization()
-
-    def start_tokenization(self):
-        """
-        On click event handler for Tokenization start button
-        """
+    def tokenization_handler(self):
         file_name = self.ui.file_path_textEdit.text()
-        try:
-            self.log_file = LogFile(file_name)
-            msg = "0/{}".format(self.log_file.number_of_lines)
-            self.ui.records_processed_value_label.setText(msg)
-            self.log_file.tokenize(self.ui)
-        except (OSError, IOError) as e:
-            msg = "File not found or you do not have permission to access the"\
-                " file. Please try again"
-            QtGui.QMessageBox.critical(
-                self.ui.centralwidget, "YAST - Error", msg + ": " + str(e))
-            self.ui.token_frame.setEnabled(False)
-            return
-        except Exception as e:
-            QtGui.QMessageBox.critical(
-                self.ui.centralwidget, "Yast - Error", str(e))
-            self.ui.token_frame.setEnabled(False)
-            return
-        rows_count = self.log_file.total_db_records
-        self.end_tokenization(rows_count)
+        self.ui.records_processed_label.setText("Records processed")
+        self.thread = TokenizationThread(file_name)
+        self.thread.update_progress.connect(self.update_progress)
 
-    def end_tokenization(self, rows_count):
-        """ Post tokenization handler """
-        self.ui.token_frame.setEnabled(False)
-        self.ui.clean_frame.setEnabled(True)
-        self.ui.session_frame.setEnabled(True)
-
-        # print output to textEdit
-        self.print_output("TOKEN")
-        msg = "{}/{}".format(rows_count, rows_count)
-        self.ui.records_processed_value_label.setText(msg)
-
-        msg = "Tokenization completed. Successfully processed {} lines. "\
-            "Please start clean or sessionization.".format(rows_count)
-        self.ui.status_lineEdit.setText(msg)
-        QtGui.QMessageBox.information(
-            self.ui.centralwidget, "YAST - Processing Completed", msg)
-        self.ui.B_TStart.setEnabled(True)
+    def update_progress(self, status_dict):
+        # Calculate completion percentage
+        total_count = status_dict['total_count']
+        current_count = status_dict['current_count']
+        self.ui.progressBar.setValue(current_count)
+        msg = self.ui.records_processed_value_label.text().split('/')
+        msg[0] = str(current_count)
+        msg[1] = str(total_count)
+        self.ui.records_processed_value_label.setText("/".join(msg))
 
     def print_output(self, _type):
         """
@@ -183,6 +138,18 @@ class YastGui(QtGui.QMainWindow):
         self.ui.status_lineEdit.setText(msg)
         QtGui.QMessageBox.information(
             self.ui.centralwidget, "YAST - Processing Started", msg)
+
+
+class TokenizationThread(QtCore.QThread):
+    """docstring for TokenizationThread"""
+    update_progress_signal = QtCore.pyqtSignal(dict)
+
+    def __init__(self, file_name):
+        super(TokenizationThread, self).__init__()
+        self.log_file = LogFile(file_name)
+
+    def run(self):
+        self.log_file.tokenize()
 
 
 def main():
