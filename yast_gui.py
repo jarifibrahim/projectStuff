@@ -26,7 +26,7 @@ class YastGui(QtGui.QMainWindow):
             lambda x: self.ui.token_frame.setEnabled(True))
         self.ui.B_Close.clicked.connect(self.close_application)
         self.ui.B_Save.clicked.connect(self.file_save)
-        self.ui.B_TStart.clicked.connect(self.start_tokenization)
+        self.ui.B_TStart.clicked.connect(self.init_tokenization)
         self.ui.B_CStart.clicked.connect(self.start_cleaning)
         self.ui.actionOpen.triggered.connect(self.choose_file)
         self.ui.actionOpen.setShortcut("ctrl+O")
@@ -66,29 +66,35 @@ class YastGui(QtGui.QMainWindow):
 
     def init_tokenization(self):
         """ Initializes tokenization """
+
+        self.ui.B_TStart.setEnabled(False)
         # Drop all existing tables
         settings.Base.metadata.drop_all(settings.engine)
         # create new tables
         settings.Base.metadata.create_all(settings.engine)
         msg = "Tokenization in progress. Please wait..."
         self.ui.status_lineEdit.setText(msg)
+        msg = "Tokenization started."
         QtGui.QMessageBox.information(
             self.ui.centralwidget, "YAST - Processing Started", msg)
+
+        self.start_tokenization()
 
     def start_tokenization(self):
         """
         On click event handler for Tokenization start button
         """
-        self.init_tokenization()
         file_name = self.ui.file_path_textEdit.text()
         try:
             self.log_file = LogFile(file_name)
-            rows_count = self.log_file.tokenize()
-        except (OSError, IOError):
+            msg = "0/{}".format(self.log_file.number_of_lines)
+            self.ui.records_processed_value_label.setText(msg)
+            self.log_file.tokenize(self.ui)
+        except (OSError, IOError) as e:
             msg = "File not found or you do not have permission to access the"\
                 " file. Please try again"
             QtGui.QMessageBox.critical(
-                self.ui.centralwidget, "YAST - Error", msg)
+                self.ui.centralwidget, "YAST - Error", msg + ": " + str(e))
             self.ui.token_frame.setEnabled(False)
             return
         except Exception as e:
@@ -96,6 +102,7 @@ class YastGui(QtGui.QMainWindow):
                 self.ui.centralwidget, "Yast - Error", str(e))
             self.ui.token_frame.setEnabled(False)
             return
+        rows_count = self.log_file.total_db_records
         self.end_tokenization(rows_count)
 
     def end_tokenization(self, rows_count):
@@ -106,12 +113,15 @@ class YastGui(QtGui.QMainWindow):
 
         # print output to textEdit
         self.print_output("TOKEN")
+        msg = "{}/{}".format(rows_count, rows_count)
+        self.ui.records_processed_value_label.setText(msg)
 
         msg = "Tokenization completed. Successfully processed {} lines. "\
             "Please start clean or sessionization.".format(rows_count)
         self.ui.status_lineEdit.setText(msg)
         QtGui.QMessageBox.information(
             self.ui.centralwidget, "YAST - Processing Completed", msg)
+        self.ui.B_TStart.setEnabled(True)
 
     def print_output(self, _type):
         """
@@ -136,6 +146,7 @@ class YastGui(QtGui.QMainWindow):
         ignore_text = self.ui.ignore_ext_lineEdit.text()
         msg = "Log Filtering in progress. Please wait..."
         self.ui.status_lineEdit.setText(msg)
+        msg = "Log filtering started."
         QtGui.QMessageBox.information(
             self.ui.centralwidget, "YAST - Processing Started", msg)
 
@@ -145,9 +156,20 @@ class YastGui(QtGui.QMainWindow):
             QtGui.QMessageBox.critical(self.ui.centralwidget, "YAST - Error",
                                        "Invalid ignore list. Please add all "
                                        "file extensions seperated by comman")
+
+        self.ui.progressBar.setValue(0)
         del_count = self.log_file.filter_file(ignore_list)
+        self.ui.progressBar.setMaximum(100)
+        self.ui.progressBar.setValue(100)
 
         self.print_output("TOKEN")
+
+        msg = "{}/{}".format(del_count,
+                             self.log_file.total_db_records + del_count)
+        self.ui.records_processed_value_label.setText(msg)
+        msg = "Records removed"
+        self.ui.records_processed_label.setText(msg)
+
         msg = "Log Filtering completed successfully. Deleted %s entries."\
             "\nYou can now sessionize the log file." % del_count
         self.ui.status_lineEdit.setText(msg)

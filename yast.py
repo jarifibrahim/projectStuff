@@ -16,15 +16,17 @@ class LogFile(object):
 
     def __init__(self, file_path):
         super(LogFile, self).__init__()
+
+        self.total_db_records = 0
         self.path = file_path
         try:
-            self.file = open(file_path, "r")
+            self.file = open(file_path, "r", encoding="latin-1")
         except (OSError, IOError):
             raise
         self.file_type = self._file_type()
         self.file_size = os.stat(self.path).st_size
-        self._number_of_lines = self._number_of_lines
-        self.file_name = self._file_name
+        self.number_of_lines = self._count_lines()
+        self.file_name = self._file_name()
 
     def filter_file(self, ignore_list):
         """
@@ -40,6 +42,9 @@ class LogFile(object):
         method = settings.ignore_criteria['method']
         min_size = settings.ignore_criteria['size_of_object']
 
+        # Strip whitespaces from every element of the ignore_list
+        ignore_list = [x.strip(' ') for x in ignore_list]
+
         if self.file_type == settings.APACHE_COMMON:
             del_count = settings.session.query(Token_common).filter(
                 or_(Token_common.status_code != status_code,
@@ -48,18 +53,20 @@ class LogFile(object):
                     Token_common.size_of_object <= min_size)
             ).delete(synchronize_session='fetch')
             settings.session.commit()
+            self.total_db_records = self.db_entries_count()
             return del_count
 
         elif self.file_type == settings.SQUID:
             pass
 
-    def tokenize(self):
+    def tokenize(self, ui):
         """
         Break the log file into tokens and insert them into the database
         :return: Number of rows inserted
         """
+        ui.progressBar.setMaximum(self.number_of_lines)
         if self.file_type == settings.APACHE_COMMON:
-            for line in self.file:
+            for i, line in enumerate(self.file):
                 item = line.split(" ")
                 # modelsemove '[' from date
                 datetime_string = item[3].replace('[', '')
@@ -96,8 +103,16 @@ class LogFile(object):
                     protocol=protocol_string, status_code=status_code,
                     size_of_object=bytes_transferred)
                 settings.session.add(token)
+
+                # Calculate completion percentage
+                ui.progressBar.setValue(i + 1)
+
+                msg = ui.records_processed_value_label.text().split('/')
+                msg[0] = str(i + 1)
+                ui.records_processed_value_label.setText("/".join(msg))
+                ui.records_processed_label.setText("Records processed")
             settings.session.commit()
-            return settings.session.query(Token_common).count()
+            self.total_db_records = self.db_entries_count()
 
     def get_all_tokens(self):
         """
@@ -105,6 +120,14 @@ class LogFile(object):
         """
         if self.file_type == settings.APACHE_COMMON:
             return settings.session.query(Token_common).all()
+
+    def db_entries_count(self):
+        """
+        Returns the total number of records in the table
+        """
+        if self.file_type == settings.APACHE_COMMON:
+            count = settings.session.query(Token_common).count()
+            return count
 
     def _file_type(self):
         """
@@ -135,7 +158,7 @@ class LogFile(object):
         except IndexError:
             return self.path
 
-    def _number_of_lines(self):
+    def _count_lines(self):
         count = sum(1 for _ in self.file)
         # Move file pointer to the start of the file
         self.file.seek(0, 0)
