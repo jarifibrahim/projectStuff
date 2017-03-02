@@ -1,7 +1,6 @@
 # /usr/bin/python3
 
 import re
-import os
 from datetime import datetime
 from models import Token_common
 import settings
@@ -15,81 +14,45 @@ class LogFile(object):
     def __init__(self, file_path):
         super(LogFile, self).__init__()
 
-        self.total_db_records = 0
         self.path = file_path
         try:
             self.file = open(file_path, "r", encoding="latin-1")
         except (OSError, IOError):
             raise
-        self.file_type = self._file_type()
-        self.file_size = os.stat(self.path).st_size
-        self.file_name = self._file_name()
+        self.file_type = self.get_file_type()
+        self.session = settings.Session()
 
-    def filter_file(self, ignore_list):
+    def get_file_type(self):
         """
-        Removes unnecessary entries from the log file based on the list of
-        file formats in items list
-        :param ignore_list: List of file extensions to be removed
-        :return: Number of rows deleted
+        Returns log file type.
+        :return: File type. Possible values APACHE_COMMON and SQUID
         """
-
-        # Ignore criteria
-        status_code = settings.ignore_criteria['status_code']
-        # Request method
-        method = settings.ignore_criteria['method']
-        min_size = settings.ignore_criteria['size_of_object']
-
-        # Strip whitespaces from every element of the ignore_list
-        ignore_list = [x.strip(' ') for x in ignore_list]
-
-        if self.file_type == settings.APACHE_COMMON:
-            del_count = settings.session.query(Token_common).filter(
-                or_(Token_common.status_code != status_code,
-                    ~Token_common.method.in_(method),
-                    Token_common.request_ext.in_(ignore_list),
-                    Token_common.size_of_object <= min_size)
-            ).delete(synchronize_session='fetch')
-            settings.session.commit()
-            self.total_db_records = self.db_entries_count()
-            return del_count
-
-        elif self.file_type == settings.SQUID:
-            pass
-
-    def get_all_tokens(self):
-        """
-        Return all tokens in the database
-        """
-        if self.file_type == settings.APACHE_COMMON:
-            return settings.session.query(Token_common).all()
-
-    def db_entries_count(self):
-        """
-        Returns the total number of records in the table
-        """
-        if self.file_type == settings.APACHE_COMMON:
-            count = settings.session.query(Token_common).count()
-            return count
-
-    def _file_name(self):
-        try:
-            return self.path.split("/")[-1]
-        except IndexError:
-            return self.path
+        # Save original position
+        orig = self.file.tell()
+        line = self.file.readline()
+        file_type = None
+        regex = re.compile(settings.SQUID_LOG_RE)
+        if regex.match(line):
+            file_type = settings.SQUID
+        regex = re.compile(settings.APACHE_COMMON_LOG_RE)
+        if regex.match(line):
+            file_type = settings.APACHE_COMMON
+        # Move cursor back to original
+        self.file.seek(orig)
+        if not file_type:
+            raise ValueError("Unrecognized file format.\nWe currently support "
+                             "only Apache Web Server Log file and Squid Proxy "
+                             "Server Log file.")
+        return file_type
 
 
-class TokenizationThread(QtCore.QThread):
+class TokenizationThread(LogFile, QtCore.QThread):
     """docstring for TokenizationThread"""
     line_count_signal = QtCore.pyqtSignal(int)
     update_progress_signal = QtCore.pyqtSignal(list)
 
     def __init__(self, file_path):
-        super(TokenizationThread, self).__init__()
-        try:
-            self.file = open(file_path, "r", encoding="latin-1")
-        except (OSError, IOError):
-            raise
-        self.file_type = self._file_type()
+        super(TokenizationThread, self).__init__(file_path)
 
     def run(self):
         number_of_lines = self._count_lines()
@@ -108,7 +71,6 @@ class TokenizationThread(QtCore.QThread):
         Break the log file into tokens and insert them into the database
         """
         # Create new scoped_session. All threads need independent sessions
-        session = settings.Session()
 
         if self.file_type == settings.APACHE_COMMON:
             token_array = []
@@ -150,8 +112,8 @@ class TokenizationThread(QtCore.QThread):
                     size_of_object=bytes_transferred)
                 token_array.append(token_object)
                 self.send_result_signal(i, token_object)
-            settings.session.bulk_save_objects(token_array)
-            session.commit()
+            self.session.bulk_save_objects(token_array)
+            self.session.commit()
 
     def send_result_signal(self, i, token_obj):
         """
@@ -169,25 +131,61 @@ class TokenizationThread(QtCore.QThread):
         # Send status to GUI
         self.update_progress_signal.emit(msg)
 
-    def _file_type(self):
+
+class FilteringThread(LogFile, QtCore.QThread):
+    """ Filters data in the database according to ignore criteria"""
+
+    line_count_signal = QtCore.pyqtSignal(int)
+    result_item_signal = QtCore.pyqtSignal(list)
+
+    def __init__(self, file_path, ignore_list):
+        super(FilteringThread, self).__init__(file_path)
+        self.ignore_list = ignore_list
+
+    def run(self):
         """
-        Returns log file type.
-        :return: File type. Possible values APACHE_COMMON and SQUID
+        Removes unnecessary entries from the log file based on the list of
+        file formats in items list
         """
-        # Save original position
-        orig = self.file.tell()
-        line = self.file.readline()
-        file_type = None
-        regex = re.compile(settings.SQUID_LOG_RE)
-        if regex.match(line):
-            file_type = settings.SQUID
-        regex = re.compile(settings.APACHE_COMMON_LOG_RE)
-        if regex.match(line):
-            file_type = settings.APACHE_COMMON
-        # Move cursor back to original
-        self.file.seek(orig)
-        if not file_type:
-            raise ValueError("Unrecognized file format.\nWe currently support "
-                             "only Apache Web Server Log file and Squid Proxy "
-                             "Server Log file.")
-        return file_type
+        # Ignore criteria
+        status_code = settings.ignore_criteria['status_code']
+        # Request method
+        method = settings.ignore_criteria['method']
+        min_size = settings.ignore_criteria['size_of_object']
+
+        # Strip whitespaces from every element of the ignore_list
+        ignore_list = [x.strip(' ') for x in self.ignore_list]
+        del_count = 0
+        if self.file_type == settings.APACHE_COMMON:
+            # Entries with these IDs will be removed
+            del_count = self.session.query(Token_common).filter(
+                or_(Token_common.status_code != status_code,
+                    ~Token_common.method.in_(method),
+                    Token_common.request_ext.in_(ignore_list),
+                    Token_common.size_of_object <= min_size)).delete(
+                synchronize_session='fetch')
+            self.session.commit()
+
+        elif self.file_type == settings.SQUID:
+            pass
+
+        self.send_all_data(del_count)
+
+    def send_all_data(self, del_count):
+        """
+        Send filtered data to GUI
+        :param del_count: Number of rows deleted
+        """
+        # Send result to GUI
+        self.line_count_signal.emit(self.session.query(Token_common).count())
+
+        for i, token_obj in enumerate(self.session.query(Token_common).all()):
+            text = [i + 1, token_obj.ip_address,
+                    token_obj.user_identifier, token_obj.user_id,
+                    str(token_obj.date_time), token_obj.time_zone,
+                    token_obj.method, token_obj.status_code,
+                    token_obj.size_of_object, token_obj.protocol,
+                    token_obj.resource_requested]
+            # *text is used to expand list in place
+            msg = [i, settings.APACHE_COMMON_OUTPUT_FORMAT.format(*text)]
+            self.result_item_signal.emit(msg)

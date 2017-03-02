@@ -2,19 +2,16 @@ from PyQt4 import QtGui
 from ui_mainwindow import Ui_MainWindow
 import sys
 import settings
-from yast import TokenizationThread
-import models
+from yast import TokenizationThread, FilteringThread
 
 
 class YastGui(QtGui.QMainWindow):
     def __init__(self):
         super(YastGui, self).__init__()
 
-        # main log file object
-        self.log_file = None
-
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.total_records = 0
 
         # Disable frames
         self.ui.token_frame.setEnabled(False)
@@ -28,7 +25,7 @@ class YastGui(QtGui.QMainWindow):
         self.ui.B_Close.clicked.connect(self.close_application)
         self.ui.B_Save.clicked.connect(self.file_save)
         self.ui.B_TStart.clicked.connect(self.tokenization_handler)
-        self.ui.B_CStart.clicked.connect(self.start_cleaning)
+        self.ui.B_CStart.clicked.connect(self.filter_handler)
         self.ui.actionOpen.triggered.connect(self.choose_file)
         self.ui.actionOpen.setShortcut("ctrl+O")
         self.ui.actionSave_As.triggered.connect(self.file_save)
@@ -46,7 +43,6 @@ class YastGui(QtGui.QMainWindow):
         self.ui.token_frame.setEnabled(True)
         self.ui.clean_frame.setEnabled(False)
         self.ui.session_frame.setEnabled(False)
-        self.ui.B_TStart.setEnabled(True)
 
     def close_application(self):
         """ Exit event handler """
@@ -71,26 +67,52 @@ class YastGui(QtGui.QMainWindow):
         file.close()
 
     def tokenization_handler(self):
-        """
-        Start Tokenization button handler
-        """
         self.init_database()
-        self.ui.B_TStart.setEnabled(False)
-        self.ui.progressBar.setValue(0)
-        self.ui.records_processed_value_label.setText("0/0")
 
-        file_name = self.ui.file_path_textEdit.text()
-        self.ui.records_processed_label.setText("Records processed")
-        self.thread = TokenizationThread(file_name)
+        self.file_path = self.ui.file_path_textEdit.text()
+        try:
+            self.thread = TokenizationThread(self.file_path)
+        except (OSError, IOError) as e:
+            msg = "Unable to open file"
+            QtGui.QMessageBox.critical(
+                self.ui.centralwidget, "YAST - Error", msg + ": " + str(e))
+            self.ui.token_frame.setEnabled(False)
+            return
+
         self.thread.update_progress_signal.connect(self.update_progress)
         self.thread.line_count_signal.connect(self.set_total_count)
+        self.thread.finished.connect(self.tokenization_completed)
+        self.thread.started.connect(self.tokenization_started)
         self.thread.start()
+
+    def tokenization_started(self):
+        self.ui.token_frame.setEnabled(False)
+        self.ui.progressBar.setValue(0)
+        self.ui.records_processed_value_label.setText("0/0")
+        self.ui.records_processed_label.setText("Records processed")
+        msg = "Please wait. Tokenization in progress."
+        self.ui.status_lineEdit.setText(msg)
+        heading = settings.APACHE_COMMON_HEADING
+        self.ui.output_textEdit.setText(heading)
+
+    def tokenization_completed(self):
+        self.ui.clean_frame.setEnabled(True)
+        self.ui.session_frame.setEnabled(True)
+
+        count = self.ui.records_processed_value_label.text().split('/')[0]
+        msg = "Tokenization completed. Successfully processed {} lines. "\
+            "Please start clean or sessionization.".format(count)
+        self.ui.status_lineEdit.setText(msg)
+        QtGui.QMessageBox.information(
+            self.ui.centralwidget, "YAST - Processing Completed", msg)
 
     def set_total_count(self, count):
         """ Set total number of lines in the GUI """
         msg = "0/{}".format(count)
         self.ui.records_processed_value_label.setText(msg)
         self.ui.progressBar.setMaximum(count)
+        self.old_total_records = self.total_records
+        self.total_records = count
 
     def update_progress(self, status_list):
         """ Update progress bar and current status in the GUI """
@@ -110,57 +132,28 @@ class YastGui(QtGui.QMainWindow):
         settings.Base.metadata.create_all(settings.engine)
         settings.session.commit()
 
-    def print_output(self, _type):
-        """
-        Helper method to print output to the output_textEdit
-        :param _type: Type of operation. Possible values TOKEN and SESSION
-        """
-        self.ui.output_textEdit.setText("")
-        if _type == "TOKEN":
-            if self.log_file.file_type == settings.APACHE_COMMON:
-                heading = settings.APACHE_COMMON_HEADING
-                self.ui.output_textEdit.setText(heading)
-                # TODO: Output data from table to output_textEdit
-                all_tokens = self.log_file.get_all_tokens()
-                for item in all_tokens:
-                    # This makes sure the Gui is refreshed after every loop
-                    QtGui.QApplication.processEvents()
-                    self.ui.output_textEdit.append(str(item))
-            if self.log_file.file_type == settings.SQUID:
-                pass
-        elif _type == "SESSION":
-            pass
+    def filter_handler(self):
+        ignore_list = self.ui.ignore_ext_lineEdit.text().split(",")
 
-    def start_cleaning(self):
-        ignore_text = self.ui.ignore_ext_lineEdit.text()
+        self.filter_thread = FilteringThread(self.file_path, ignore_list)
+        self.filter_thread.started.connect(self.filter_started)
+        self.filter_thread.line_count_signal.connect(self.set_total_count)
+        self.filter_thread.result_item_signal.connect(
+            self.update_progress)
+        self.filter_thread.finished.connect(self.filter_completed)
+        self.filter_thread.start()
+
+    def filter_started(self):
         msg = "Log Filtering in progress. Please wait..."
         self.ui.status_lineEdit.setText(msg)
-        msg = "Log filtering started."
-        QtGui.QMessageBox.information(
-            self.ui.centralwidget, "YAST - Processing Started", msg)
-
-        try:
-            ignore_list = ignore_text.split(",")
-        except Exception:
-            QtGui.QMessageBox.critical(self.ui.centralwidget, "YAST - Error",
-                                       "Invalid ignore list. Please add all "
-                                       "file extensions seperated by comman")
-
+        heading = settings.APACHE_COMMON_HEADING
+        self.ui.output_textEdit.setText(heading)
         self.ui.progressBar.setValue(0)
-        del_count = self.log_file.filter_file(ignore_list)
-        self.ui.progressBar.setMaximum(100)
-        self.ui.progressBar.setValue(100)
 
-        self.print_output("TOKEN")
-
-        msg = "{}/{}".format(del_count,
-                             self.log_file.total_db_records + del_count)
-        self.ui.records_processed_value_label.setText(msg)
-        msg = "Records removed"
-        self.ui.records_processed_label.setText(msg)
-
+    def filter_completed(self):
         msg = "Log Filtering completed successfully. Deleted %s entries."\
-            "\nYou can now sessionize the log file." % del_count
+            "\nYou can now sessionize the log file." % (
+                self.old_total_records - self.total_records)
         self.ui.status_lineEdit.setText(msg)
         QtGui.QMessageBox.information(
             self.ui.centralwidget, "YAST - Processing Started", msg)
