@@ -1,12 +1,17 @@
 from sqlalchemy import create_engine, orm
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.ext.declarative import declarative_base
 
 
 # Format of the datetime string in the log file
 DATETIME_FORMAT = '%d/%b/%Y:%H:%M:%S'
-# Create in-memory database
-engine = create_engine('sqlite:///:memory:')
-Session = orm.sessionmaker(bind=engine)
+# Create in-memory database with support for concurrent access by threads
+engine = create_engine('sqlite://',
+                       connect_args={'check_same_thread': False},
+                       poolclass=StaticPool)
+Session_Factory = orm.sessionmaker(bind=engine)
+# Required for threading
+Session = orm.scoped_session(Session_Factory)
 session = Session()
 Base = declarative_base()
 

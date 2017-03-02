@@ -1,8 +1,9 @@
-from PyQt4 import QtGui, QtCore
+from PyQt4 import QtGui
 from ui_mainwindow import Ui_MainWindow
 import sys
 import settings
-from yast import LogFile
+from yast import TokenizationThread
+import models
 
 
 class YastGui(QtGui.QMainWindow):
@@ -26,7 +27,7 @@ class YastGui(QtGui.QMainWindow):
             lambda x: self.ui.token_frame.setEnabled(True))
         self.ui.B_Close.clicked.connect(self.close_application)
         self.ui.B_Save.clicked.connect(self.file_save)
-        self.ui.B_TStart.clicked.connect(self.init_tokenization)
+        self.ui.B_TStart.clicked.connect(self.tokenization_handler)
         self.ui.B_CStart.clicked.connect(self.start_cleaning)
         self.ui.actionOpen.triggered.connect(self.choose_file)
         self.ui.actionOpen.setShortcut("ctrl+O")
@@ -45,6 +46,7 @@ class YastGui(QtGui.QMainWindow):
         self.ui.token_frame.setEnabled(True)
         self.ui.clean_frame.setEnabled(False)
         self.ui.session_frame.setEnabled(False)
+        self.ui.B_TStart.setEnabled(True)
 
     def close_application(self):
         """ Exit event handler """
@@ -69,20 +71,44 @@ class YastGui(QtGui.QMainWindow):
         file.close()
 
     def tokenization_handler(self):
+        """
+        Start Tokenization button handler
+        """
+        self.init_database()
+        self.ui.B_TStart.setEnabled(False)
+        self.ui.progressBar.setValue(0)
+        self.ui.records_processed_value_label.setText("0/0")
+
         file_name = self.ui.file_path_textEdit.text()
         self.ui.records_processed_label.setText("Records processed")
         self.thread = TokenizationThread(file_name)
-        self.thread.update_progress.connect(self.update_progress)
+        self.thread.update_progress_signal.connect(self.update_progress)
+        self.thread.line_count_signal.connect(self.set_total_count)
+        self.thread.start()
 
-    def update_progress(self, status_dict):
+    def set_total_count(self, count):
+        """ Set total number of lines in the GUI """
+        msg = "0/{}".format(count)
+        self.ui.records_processed_value_label.setText(msg)
+        self.ui.progressBar.setMaximum(count)
+
+    def update_progress(self, status_list):
+        """ Update progress bar and current status in the GUI """
         # Calculate completion percentage
-        total_count = status_dict['total_count']
-        current_count = status_dict['current_count']
-        self.ui.progressBar.setValue(current_count)
+        current_count = status_list[0]
+        self.ui.progressBar.setValue(current_count + 1)
         msg = self.ui.records_processed_value_label.text().split('/')
-        msg[0] = str(current_count)
-        msg[1] = str(total_count)
+        msg[0] = str(current_count + 1)
         self.ui.records_processed_value_label.setText("/".join(msg))
+        self.ui.output_textEdit.append(status_list[1])
+
+    def init_database(self):
+        """ Create all tables """
+        # Drop all existing tables
+        settings.Base.metadata.drop_all(settings.engine)
+        # create new tables
+        settings.Base.metadata.create_all(settings.engine)
+        settings.session.commit()
 
     def print_output(self, _type):
         """
@@ -138,18 +164,6 @@ class YastGui(QtGui.QMainWindow):
         self.ui.status_lineEdit.setText(msg)
         QtGui.QMessageBox.information(
             self.ui.centralwidget, "YAST - Processing Started", msg)
-
-
-class TokenizationThread(QtCore.QThread):
-    """docstring for TokenizationThread"""
-    update_progress_signal = QtCore.pyqtSignal(dict)
-
-    def __init__(self, file_name):
-        super(TokenizationThread, self).__init__()
-        self.log_file = LogFile(file_name)
-
-    def run(self):
-        self.log_file.tokenize()
 
 
 def main():

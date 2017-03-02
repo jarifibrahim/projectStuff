@@ -6,8 +6,7 @@ from datetime import datetime
 from models import Token_common
 import settings
 from sqlalchemy import or_
-
-log_file = None
+from PyQt4 import QtCore
 
 
 class LogFile(object):
@@ -24,7 +23,6 @@ class LogFile(object):
             raise
         self.file_type = self._file_type()
         self.file_size = os.stat(self.path).st_size
-        self.number_of_lines = self._count_lines()
         self.file_name = self._file_name()
 
     def filter_file(self, ignore_list):
@@ -58,12 +56,60 @@ class LogFile(object):
         elif self.file_type == settings.SQUID:
             pass
 
-    def tokenize(self, ui):
+    def get_all_tokens(self):
+        """
+        Return all tokens in the database
+        """
+        if self.file_type == settings.APACHE_COMMON:
+            return settings.session.query(Token_common).all()
+
+    def db_entries_count(self):
+        """
+        Returns the total number of records in the table
+        """
+        if self.file_type == settings.APACHE_COMMON:
+            count = settings.session.query(Token_common).count()
+            return count
+
+    def _file_name(self):
+        try:
+            return self.path.split("/")[-1]
+        except IndexError:
+            return self.path
+
+
+class TokenizationThread(QtCore.QThread):
+    """docstring for TokenizationThread"""
+    line_count_signal = QtCore.pyqtSignal(int)
+    update_progress_signal = QtCore.pyqtSignal(list)
+
+    def __init__(self, file_path):
+        super(TokenizationThread, self).__init__()
+        try:
+            self.file = open(file_path, "r", encoding="latin-1")
+        except (OSError, IOError):
+            raise
+        self.file_type = self._file_type()
+
+    def run(self):
+        number_of_lines = self._count_lines()
+        # Send number of lines to the GUI
+        self.line_count_signal.emit(number_of_lines)
+        self.tokenize()
+
+    def _count_lines(self):
+        count = sum(1 for _ in self.file)
+        # Move file pointer to the start of the file
+        self.file.seek(0, 0)
+        return count
+
+    def tokenize(self):
         """
         Break the log file into tokens and insert them into the database
-        :return: Number of rows inserted
         """
-        ui.progressBar.setMaximum(self.number_of_lines)
+        # Create new scoped_session. All threads need independent sessions
+        session = settings.Session()
+
         if self.file_type == settings.APACHE_COMMON:
             token_array = []
             for i, line in enumerate(self.file):
@@ -95,39 +141,33 @@ class LogFile(object):
                     status_code = int(item[8])
                 except ValueError:
                     status_code = 0
-                token_array.append(Token_common(
+                token_object = Token_common(
                     ip_address=item[0], user_identifier=item[1],
                     user_id=item[2], date_time=date_time,
                     time_zone=timezone_string, method=method_string,
                     resource_requested=item[6], request_ext=request_ext,
                     protocol=protocol_string, status_code=status_code,
-                    size_of_object=bytes_transferred))
-
-                # Calculate completion percentage
-                ui.progressBar.setValue(i + 1)
-
-                msg = ui.records_processed_value_label.text().split('/')
-                msg[0] = str(i + 1)
-                ui.records_processed_value_label.setText("/".join(msg))
-                ui.records_processed_label.setText("Records processed")
+                    size_of_object=bytes_transferred)
+                token_array.append(token_object)
+                self.send_result_signal(i, token_object)
             settings.session.bulk_save_objects(token_array)
-            settings.session.commit()
-            self.total_db_records = self.db_entries_count()
+            session.commit()
 
-    def get_all_tokens(self):
+    def send_result_signal(self, i, token_obj):
         """
-        Return all tokens in the database
+        Send current status of the tokenization to the GUI.
+        :param i: Current tokenization count
+        :param token_obj: Token_common object
         """
-        if self.file_type == settings.APACHE_COMMON:
-            return settings.session.query(Token_common).all()
-
-    def db_entries_count(self):
-        """
-        Returns the total number of records in the table
-        """
-        if self.file_type == settings.APACHE_COMMON:
-            count = settings.session.query(Token_common).count()
-            return count
+        text = [i, token_obj.ip_address, token_obj.user_identifier,
+                token_obj.user_id, str(token_obj.date_time),
+                token_obj.time_zone, token_obj.method, token_obj.status_code,
+                token_obj.size_of_object, token_obj.protocol,
+                token_obj.resource_requested]
+        # *text is used to expand list in place
+        msg = [i, settings.APACHE_COMMON_OUTPUT_FORMAT.format(*text)]
+        # Send status to GUI
+        self.update_progress_signal.emit(msg)
 
     def _file_type(self):
         """
@@ -151,15 +191,3 @@ class LogFile(object):
                              "only Apache Web Server Log file and Squid Proxy "
                              "Server Log file.")
         return file_type
-
-    def _file_name(self):
-        try:
-            return self.path.split("/")[-1]
-        except IndexError:
-            return self.path
-
-    def _count_lines(self):
-        count = sum(1 for _ in self.file)
-        # Move file pointer to the start of the file
-        self.file.seek(0, 0)
-        return count
