@@ -2,7 +2,7 @@ from PyQt4 import QtGui
 from ui_mainwindow import Ui_MainWindow
 import sys
 import settings
-from yast import TokenizationThread, FilteringThread
+from yast import TokenizationThread, FilteringThread, SessionThread
 
 
 class YastGui(QtGui.QMainWindow):
@@ -26,6 +26,7 @@ class YastGui(QtGui.QMainWindow):
         self.ui.B_Save.clicked.connect(self.file_save)
         self.ui.B_TStart.clicked.connect(self.tokenization_handler)
         self.ui.B_CStart.clicked.connect(self.filter_handler)
+        self.ui.B_SStart.clicked.connect(self.sessionization_handler)
         self.ui.actionOpen.triggered.connect(self.choose_file)
         self.ui.actionOpen.setShortcut("ctrl+O")
         self.ui.actionSave_As.triggered.connect(self.file_save)
@@ -67,6 +68,9 @@ class YastGui(QtGui.QMainWindow):
         file.close()
 
     def tokenization_handler(self):
+        """
+        Tokenization handler is invoked by the start tokenization button
+        """
         self.init_database()
 
         self.file_path = self.ui.file_path_textEdit.text()
@@ -86,19 +90,28 @@ class YastGui(QtGui.QMainWindow):
         self.thread.start()
 
     def tokenization_started(self):
+        """ Signal handler for STARTED signal of TokenizationThread """
         self.ui.token_frame.setEnabled(False)
+        self.ui.B_Save.setEnabled(False)
+        self.ui.B_Close.setEnabled(False)
+
         self.ui.progressBar.setValue(0)
         self.ui.records_processed_value_label.setText("0/0")
         self.ui.records_processed_label.setText("Records processed")
+
         msg = "Please wait. Tokenization in progress."
         self.ui.status_lineEdit.setText(msg)
+
         heading = settings.APACHE_COMMON_HEADING
         self.ui.output_textEdit.setText(heading)
 
     def tokenization_completed(self):
+        """ Signal handler for FINISHED signal of TokenizationThread """
         self.ui.clean_frame.setEnabled(True)
         self.ui.session_frame.setEnabled(True)
 
+        self.ui.B_Save.setEnabled(True)
+        self.ui.B_Close.setEnabled(True)
         count = self.ui.records_processed_value_label.text().split('/')[0]
         msg = "Tokenization completed. Successfully processed {} lines. "\
             "Please start clean or sessionization.".format(count)
@@ -122,7 +135,8 @@ class YastGui(QtGui.QMainWindow):
         msg = self.ui.records_processed_value_label.text().split('/')
         msg[0] = str(current_count + 1)
         self.ui.records_processed_value_label.setText("/".join(msg))
-        self.ui.output_textEdit.append(status_list[1])
+        if status_list[1] is not None:
+            self.ui.output_textEdit.append(status_list[1])
 
     def init_database(self):
         """ Create all tables """
@@ -133,6 +147,7 @@ class YastGui(QtGui.QMainWindow):
         settings.session.commit()
 
     def filter_handler(self):
+        """ Filter handler is invoked by start cleaning button """
         ignore_list = self.ui.ignore_ext_lineEdit.text().split(",")
 
         self.filter_thread = FilteringThread(self.file_path, ignore_list)
@@ -144,6 +159,14 @@ class YastGui(QtGui.QMainWindow):
         self.filter_thread.start()
 
     def filter_started(self):
+        """ Signal handler for STARTED signal of FilteringThread """
+
+        self.ui.token_frame.setEnabled(False)
+        self.ui.clean_frame.setEnabled(False)
+        self.ui.session_frame.setEnabled(False)
+
+        self.ui.B_Save.setEnabled(False)
+        self.ui.B_Close.setEnabled(False)
         msg = "Log Filtering in progress. Please wait..."
         self.ui.status_lineEdit.setText(msg)
         heading = settings.APACHE_COMMON_HEADING
@@ -151,12 +174,68 @@ class YastGui(QtGui.QMainWindow):
         self.ui.progressBar.setValue(0)
 
     def filter_completed(self):
+        """ Signal handler for FINISHED signal of FilteringThread """
+
+        self.ui.token_frame.setEnabled(True)
+        self.ui.clean_frame.setEnabled(True)
+        self.ui.session_frame.setEnabled(True)
+
+        self.ui.B_Save.setEnabled(True)
+        self.ui.B_Close.setEnabled(True)
         msg = "Log Filtering completed successfully. Deleted %s entries."\
             "\nYou can now sessionize the log file." % (
                 self.old_total_records - self.total_records)
         self.ui.status_lineEdit.setText(msg)
         QtGui.QMessageBox.information(
             self.ui.centralwidget, "YAST - Processing Started", msg)
+
+    def sessionization_handler(self):
+        """ Invoked by start sessionization button """
+
+        session_timer = self.ui.time_spinBox.value()
+        self.session_thread = SessionThread(self.file_path, session_timer)
+        self.session_thread.started.connect(self.sessionization_started)
+        self.session_thread.update_progress_signal.connect(
+            self.update_progress)
+        self.session_thread.total_count_signal.connect(self.set_total_count)
+        self.session_thread.step_completed_signal.connect(self.step_completed)
+        self.session_thread.finished.connect(self.sessionization_completed)
+        self.session_thread.start()
+
+    def sessionization_started(self):
+        """ Signal handler for STARTED signal of SessionizationThread """
+
+        self.ui.token_frame.setEnabled(False)
+        self.ui.clean_frame.setEnabled(False)
+        self.ui.session_frame.setEnabled(False)
+
+        self.ui.B_Save.setEnabled(False)
+        self.ui.B_Close.setEnabled(False)
+        msg = "Sessionization in progress. Please wait..."
+        self.ui.status_lineEdit.setText(msg)
+        self.ui.output_textEdit.setText(settings.URL_OUTPUT_HEADING)
+
+    def sessionization_completed(self):
+        """ Signal handler for FINISHED signal of SessionizationThread """
+
+        self.ui.token_frame.setEnabled(True)
+        self.ui.clean_frame.setEnabled(True)
+        self.ui.session_frame.setEnabled(True)
+
+        self.ui.B_Save.setEnabled(True)
+        self.ui.B_Close.setEnabled(True)
+        msg = "Sessionization successfully completed."
+        self.ui.status_lineEdit.setText(msg)
+
+        msg = "Sucessfully generated {} sessions".format(self.total_records)
+        QtGui.QMessageBox.information(
+            self.ui.centralwidget, "YAST - Processing Completed", msg)
+
+    def step_completed(self, step):
+
+        msg = "Step {}/3 of sessionization in progress. Please wait".format(
+            step)
+        self.ui.status_lineEdit.setText(msg)
 
 
 def main():

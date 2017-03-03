@@ -1,8 +1,8 @@
 # /usr/bin/python3
 
 import re
-from datetime import datetime
-from models import Token_common
+from datetime import datetime, timedelta
+from models import Token_common, Uurl, Session, get_or_create
 import settings
 from sqlalchemy import or_
 from PyQt4 import QtCore
@@ -114,6 +114,7 @@ class TokenizationThread(LogFile, QtCore.QThread):
                 self.send_result_signal(i, token_object)
             self.session.bulk_save_objects(token_array)
             self.session.commit()
+        settings.Session.remove()
 
     def send_result_signal(self, i, token_obj):
         """
@@ -170,22 +171,157 @@ class FilteringThread(LogFile, QtCore.QThread):
             pass
 
         self.send_all_data(del_count)
+        settings.Session.remove()
 
     def send_all_data(self, del_count):
         """
         Send filtered data to GUI
         :param del_count: Number of rows deleted
         """
-        # Send result to GUI
-        self.line_count_signal.emit(self.session.query(Token_common).count())
+        if self.file_type == settings.APACHE_COMMON:
+            # Send result to GUI
+            self.line_count_signal.emit(
+                self.session.query(Token_common).count())
 
-        for i, token_obj in enumerate(self.session.query(Token_common).all()):
-            text = [i + 1, token_obj.ip_address,
-                    token_obj.user_identifier, token_obj.user_id,
-                    str(token_obj.date_time), token_obj.time_zone,
-                    token_obj.method, token_obj.status_code,
-                    token_obj.size_of_object, token_obj.protocol,
-                    token_obj.resource_requested]
-            # *text is used to expand list in place
-            msg = [i, settings.APACHE_COMMON_OUTPUT_FORMAT.format(*text)]
-            self.result_item_signal.emit(msg)
+            for i, token_obj in enumerate(self.session.query(
+                    Token_common).all()):
+                text = [i + 1, token_obj.ip_address,
+                        token_obj.user_identifier, token_obj.user_id,
+                        str(token_obj.date_time), token_obj.time_zone,
+                        token_obj.method, token_obj.status_code,
+                        token_obj.size_of_object, token_obj.protocol,
+                        token_obj.resource_requested]
+                # *text is used to expand list in place
+                msg = [i, settings.APACHE_COMMON_OUTPUT_FORMAT.format(*text)]
+                self.result_item_signal.emit(msg)
+
+
+class SessionThread(LogFile, QtCore.QThread):
+    """ The thread that performs sessionization of the data in the database """
+    total_count_signal = QtCore.pyqtSignal(int)
+    update_progress_signal = QtCore.pyqtSignal(list)
+    result_signal = QtCore.pyqtSignal(str)
+    # To be sent after each step is completed
+    step_completed_signal = QtCore.pyqtSignal(int)
+
+    def __init__(self, file_path, session_timer):
+        super(SessionThread, self).__init__(file_path)
+        self.session_timer = timedelta(minutes=session_timer)
+
+    def run(self):
+
+        if self.file_type == settings.APACHE_COMMON:
+            # Get all distinct ip addresses
+            all_entries = self.session.query(Token_common.ip_address).order_by(
+                'ip_address').distinct().all()
+
+            self.total_count_signal.emit(len(all_entries))
+
+            # Create sessions for each IP address
+            for i, entry in enumerate(all_entries):
+
+                # Get all entries for an ip address
+                same_ip_entries = self.session.query(Token_common).filter(
+                    Token_common.ip_address == entry.ip_address).order_by(
+                    Token_common.date_time).all()
+
+                total_session_time = timedelta(0)
+
+                first_entry = same_ip_entries.pop(0)
+                # Add the first entry to sessions.
+                self.insert_item(first_entry, True)
+                # Last entry time is the datetime of the last entry processed
+                last_entry_time = first_entry.date_time
+
+                for e in same_ip_entries:
+                    # Calculate new session time
+                    s_time = e.date_time - last_entry_time
+                    # If new session time is greater than threshold
+                    if s_time + total_session_time > self.session_timer:
+                        # Create new session
+                        self.insert_item(e, True)
+                        total_session_time = timedelta(0)
+                    # If new session time is not greater than threshold
+                    else:
+                        total_session_time = s_time + total_session_time
+                        self.insert_item(e, False, total_session_time)
+                    last_entry_time = e.date_time
+                self.update_progress_signal.emit([i, None])
+                # Generating sessions completed
+                self.step_completed_signal.emit(1)
+
+        self.send_results()
+        settings.Session.remove()
+
+    def insert_item(self, token_object,
+                    new_session, session_time=timedelta(0)):
+        """
+        Create new session or update existing session object
+        :param token_object:    Token that has to be converted into session
+        :param new_session:     Boolean that denotes if this is a new session.
+                                A new session will be created if this value
+                                is True
+        :param session_time:    If an existing session is to be updated,
+                                session_time contains the new value of total
+                                session time
+        """
+        url_obj = get_or_create(
+            self.session, Uurl, url=token_object.resource_requested)
+        # If this is a new session
+        if new_session:
+            # Create session object
+            session_obj = Session(
+                ip=token_object.ip_address, session_time=session_time)
+            # Set start and end time
+            session_obj.start_time = token_object.date_time
+            session_obj.end_time = token_object.date_time
+        # If new_session is False, new session may or may not be created
+        # (depending upon the session_time)
+        else:
+            # Try to get session object
+            session_obj = get_or_create(
+                self.session, Session, ip=token_object.ip_address)
+            # If the object is a new session
+            if session_obj.session_time is timedelta(0):
+                session_obj.start_time = token_object.date_time
+
+            session_obj.session_time = session_time
+            session_obj.end_time = token_object.date_time
+
+        # Add url to session
+        session_obj.session_urls.append(url_obj)
+        self.session.add(session_obj)
+        self.session.commit()
+
+    def send_results(self):
+        """ Send sessionized data to the GUI """
+        # Send total records count for the progress bar
+        total_records = self.session.query(Uurl).count() + \
+            self.session.query(Session).count()
+        self.total_count_signal.emit(total_records)
+
+        url_query = self.session.query(Uurl).all()
+        for q in url_query:
+            self.update_progress_signal.emit([q.id, str(q)])
+
+        # Printing urls completed
+        self.step_completed_signal.emit(2)
+
+        # Id of the last element inserted. It is used to calculate progressbar
+        # value
+        last_id = self.session.query(Uurl.id).order_by(
+            Uurl.id.desc()).first()[0]
+
+        self.update_progress_signal.emit([last_id, "\n"])
+        self.update_progress_signal.emit([last_id, "\n"])
+
+        msg = settings.SESSION_OUTPUT_HEADING
+        self.update_progress_signal.emit([last_id, msg])
+
+        # Send all sessions back to GUI
+        session_query = self.session.query(Session).all()
+        for s in session_query:
+            self.update_progress_signal.emit([last_id + s.id - 1, str(s)])
+
+        # Printing sessions completed
+        self.step_completed_signal.emit(3)

@@ -40,3 +40,10 @@ ignore_criteria = {
     # Entries with size of object less than following value willbe ignored
     'size_of_object': 0
 }
+
+URL_OUTPUT_FORMAT = "{:>5}\t{:<}"
+URL_OUTPUT_HEADING = URL_OUTPUT_FORMAT.format("URL_ID", "URL")
+
+SESSION_OUTPUT_FORMAT = "{:>5}\t{: ^20}\t{: ^20}\t{: ^20}\t{:>}"
+SESSION_OUTPUT_HEADING = SESSION_OUTPUT_FORMAT.format(
+    "ID", "Session Time", "Start Time", "End Time", "URL IDs")

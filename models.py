@@ -1,5 +1,20 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, \
+    Table, Interval
+from sqlalchemy.orm import relationship
 import settings
+
+
+def get_or_create(session, model, **kwargs):
+    # Get the last item inserted
+    instance = session.query(model).filter_by(
+        **kwargs).order_by(model.id.desc()).first()
+    if instance:
+        return instance
+    else:
+        instance = model(**kwargs)
+        session.add(instance)
+        session.commit()
+        return instance
 
 
 class Token_common(settings.Base):
@@ -49,3 +64,42 @@ class Token_squid(Base):
     __tablename__ = 'Token_squid'
     pass
 '''
+
+# Defines many to many relationship between Uurl and Session Table
+association_table = Table('association', settings.Base.metadata,
+                          Column('uurl_id', Integer, ForeignKey('uurl.id')),
+                          Column('session_id', Integer,
+                                 ForeignKey('session_master.id'))
+                          )
+
+
+class Uurl(settings.Base):
+    """ Unique URL Table """
+    __tablename__ = 'uurl'
+
+    id = Column(Integer, primary_key=True)
+    url = Column(String(300))
+    sessions = relationship(
+        "Session", secondary=association_table, back_populates="session_urls")
+
+    def __str__(self):
+        return settings.URL_OUTPUT_FORMAT.format(self.id, self.url)
+
+
+class Session(settings.Base):
+    """ Session Table """
+    __tablename__ = 'session_master'
+
+    id = Column(Integer, primary_key=True)
+    session_time = Column(Interval)
+    ip = Column(String(20), index=True)
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
+    session_urls = relationship(
+        "Uurl", secondary=association_table, back_populates="sessions")
+
+    def __str__(self):
+        url = [int(x.id) for x in self.session_urls]
+        return settings.SESSION_OUTPUT_FORMAT.format(
+            self.id, str(self.session_time), str(self.start_time),
+            str(self.end_time), str(url))
