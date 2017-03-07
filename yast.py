@@ -2,7 +2,7 @@
 
 import re
 from datetime import datetime, timedelta
-from models import Token_common, Uurl, Session, get_or_create
+from models import Token_common, Token_squid, Uurl, Session, get_or_create
 import settings
 from sqlalchemy import or_
 from PyQt4 import QtCore
@@ -70,13 +70,14 @@ class TokenizationThread(LogFile, QtCore.QThread):
         """
         Break the log file into tokens and insert them into the database
         """
-        # Create new scoped_session. All threads need independent sessions
+        
 
         if self.file_type == settings.APACHE_COMMON:
             token_array = []
+            self.update_progress_signal.emit([-1, settings.APACHE_COMMON_HEADING])
             for i, line in enumerate(self.file):
                 item = line.split(" ")
-                # modelsemove '[' from date
+                # modelremove '[' from date
                 datetime_string = item[3].replace('[', '')
                 # Remove ']' from timezone
                 timezone_string = item[4].replace(']', '')
@@ -114,7 +115,27 @@ class TokenizationThread(LogFile, QtCore.QThread):
                 self.send_result_signal(i, token_object)
             self.session.bulk_save_objects(token_array)
             self.session.commit()
-        settings.Session.remove()
+            settings.Session.remove()
+
+        elif self.file_type == settings.SQUID:
+
+            token_array = []
+            self.update_progress_signal.emit([-1, settings.SQUID_HEADING])
+
+            for i, line in enumerate(self.file):
+                item = line.split(" ")
+                                
+                token_object = Token_squid(time = item[0], duration = item[1],
+                    ip_address = item[2], result_code = item[3],
+                    bytes_delivered = item[4], method = item[5],
+                    url = item[6], user = item[7], hierarchy_code = item[8],
+                    type_content = item[9]
+                )
+                token_array.append(token_object)
+                self.send_result_signal(i, token_object)
+            self.session.bulk_save_objects(token_array)
+            self.session.commit()
+            settings.Session.remove()
 
     def send_result_signal(self, i, token_obj):
         """
@@ -122,13 +143,25 @@ class TokenizationThread(LogFile, QtCore.QThread):
         :param i: Current tokenization count
         :param token_obj: Token_common object
         """
-        text = [i, token_obj.ip_address, token_obj.user_identifier,
-                token_obj.user_id, str(token_obj.date_time),
-                token_obj.time_zone, token_obj.method, token_obj.status_code,
-                token_obj.size_of_object, token_obj.protocol,
-                token_obj.resource_requested]
-        # *text is used to expand list in place
-        msg = [i, settings.APACHE_COMMON_OUTPUT_FORMAT.format(*text)]
+
+        if self.file_type == settings.APACHE_COMMON:
+            text = [i, token_obj.ip_address, token_obj.user_identifier,
+                    token_obj.user_id, str(token_obj.date_time),
+                    token_obj.time_zone, token_obj.method, token_obj.status_code,
+                    token_obj.size_of_object, token_obj.protocol,
+                    token_obj.resource_requested]
+            
+            msg = [i, settings.APACHE_COMMON_OUTPUT_FORMAT.format(*text)]
+
+        elif self.file_type == settings.SQUID:
+            text = [i, token_obj.time, token_obj.duration,
+                    token_obj.ip_address,
+                    token_obj.result_code, token_obj.bytes_delivered, token_obj.method,
+                    token_obj.url, token_obj.user,
+                    token_obj.hierarchy_code, token_obj.type_content]
+            
+            # *text is used to expand list in place
+            msg = [i, settings.SQUID_OUTPUT_FORMAT.format(*text)]
         # Send status to GUI
         self.update_progress_signal.emit(msg)
 

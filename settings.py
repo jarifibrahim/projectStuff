@@ -29,6 +29,15 @@ APACHE_COMMON_LOG_RE = '([0-9\.]+)([\w\. \-]+)\s(\[.+])\s".+"\s\d{3}.+'
 
 
 SQUID = 2
+
+SQUID_OUTPUT_FORMAT = ("{: ^5}\t{: ^50}\t{: ^50}\t{: ^50}"
+                               "\t{: ^50}\t{: ^50}\t{: ^50}\t"
+                               "{: ^50}\t{: ^50}\t{: ^50}\t{:<}")
+
+SQUID_HEADING = SQUID_OUTPUT_FORMAT.format(
+    "ID", "Time", "Duration", "IP Address", "Result Code", "Bytes Delivered", 
+    "Method", "URL", "User", "Hierarchy Code", "Type Content")
+
 SQUID_LOG_RE = '\d+\.\d+\s+\d+\s+([0-9\.]+)\s\w{1,8}\/\d{3}\s\d+.+'
 
 
