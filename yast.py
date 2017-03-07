@@ -53,12 +53,7 @@ class TokenizationThread(LogFile, QtCore.QThread):
 
     def __init__(self, file_path):
         super(TokenizationThread, self).__init__(file_path)
-
-    def run(self):
-        number_of_lines = self._count_lines()
-        # Send number of lines to the GUI
-        self.line_count_signal.emit(number_of_lines)
-        self.tokenize()
+        self.number_of_lines = self._count_lines()
 
     def _count_lines(self):
         count = sum(1 for _ in self.file)
@@ -66,15 +61,17 @@ class TokenizationThread(LogFile, QtCore.QThread):
         self.file.seek(0, 0)
         return count
 
-    def tokenize(self):
+    def run(self):
         """
         Break the log file into tokens and insert them into the database
         """
-        
+        # Send number of lines to the GUI
+        self.line_count_signal.emit(self.number_of_lines)
 
         if self.file_type == settings.APACHE_COMMON:
             token_array = []
-            self.update_progress_signal.emit([-1, settings.APACHE_COMMON_HEADING])
+            self.update_progress_signal.emit(
+                [-1, settings.APACHE_COMMON_HEADING])
             for i, line in enumerate(self.file):
                 item = line.split(" ")
                 # modelremove '[' from date
@@ -122,18 +119,27 @@ class TokenizationThread(LogFile, QtCore.QThread):
             settings.Session.remove()
 
         elif self.file_type == settings.SQUID:
-
             token_array = []
             self.update_progress_signal.emit([-1, settings.SQUID_HEADING])
-
             for i, line in enumerate(self.file):
-                item = line.split(" ")
-                                
-                token_object = Token_squid(time = item[0], duration = item[1],
-                    ip_address = item[2], result_code = item[3],
-                    bytes_delivered = item[4], method = item[5],
-                    url = item[6], user = item[7], hierarchy_code = item[8],
-                    type_content = item[9]
+                item = re.match(settings.SQUID_LOG_RE, line)
+
+                # The timestamp string contains milliseconds which cannot be
+                # directly removed. So the string is converted to float and
+                # then to an int
+                date_time = datetime.fromtimestamp(int(float(item.group(1))))
+                duration = int(item.group(2))
+                status_code = item.group(4).split("/")[-1]
+                bytes_delivered = int(item.group(5))
+                request_ext = item.group(7).split(".")[-1]
+                request_url = item.group(7).split("?")[0]
+                token_object = Token_squid(
+                    date_time=date_time, duration=duration,
+                    ip_address=item.group(3), status_code=status_code,
+                    bytes_delivered=bytes_delivered, method=item.group(6),
+                    url=request_url, user=item.group(8),
+                    hierarchy_code=item.group(9),
+                    type_content=item.group(10), request_ext=request_ext
                 )
                 token_array.append(token_object)
                 self.send_result_signal(i, token_object)
@@ -149,21 +155,21 @@ class TokenizationThread(LogFile, QtCore.QThread):
         """
 
         if self.file_type == settings.APACHE_COMMON:
-            text = [i, token_obj.ip_address, token_obj.user_identifier,
+            text = [i + 1, token_obj.ip_address, token_obj.user_identifier,
                     token_obj.user_id, str(token_obj.date_time),
-                    token_obj.time_zone, token_obj.method, token_obj.status_code,
-                    token_obj.size_of_object, token_obj.protocol,
-                    token_obj.resource_requested]
-            
+                    token_obj.time_zone, token_obj.method,
+                    token_obj.status_code, token_obj.size_of_object,
+                    token_obj.protocol, token_obj.resource_requested]
+
             msg = [i, settings.APACHE_COMMON_OUTPUT_FORMAT.format(*text)]
 
         elif self.file_type == settings.SQUID:
-            text = [i, token_obj.time, token_obj.duration,
+            text = [i + 1, str(token_obj.date_time), token_obj.duration,
                     token_obj.ip_address,
-                    token_obj.result_code, token_obj.bytes_delivered, token_obj.method,
-                    token_obj.url, token_obj.user,
-                    token_obj.hierarchy_code, token_obj.type_content]
-            
+                    token_obj.status_code, token_obj.bytes_delivered,
+                    token_obj.user, token_obj.hierarchy_code,
+                    token_obj.type_content, token_obj.method, token_obj.url]
+
             # *text is used to expand list in place
             msg = [i, settings.SQUID_OUTPUT_FORMAT.format(*text)]
         # Send status to GUI
@@ -175,6 +181,7 @@ class FilteringThread(LogFile, QtCore.QThread):
 
     line_count_signal = QtCore.pyqtSignal(int)
     result_item_signal = QtCore.pyqtSignal(list)
+    update_progress_signal = QtCore.pyqtSignal(list)
 
     def __init__(self, file_path, ignore_list):
         super(FilteringThread, self).__init__(file_path)
@@ -185,37 +192,47 @@ class FilteringThread(LogFile, QtCore.QThread):
         Removes unnecessary entries from the log file based on the list of
         file formats in items list
         """
-        # Ignore criteria
-        status_code = settings.ignore_criteria['status_code']
-        # Request method
-        method = settings.ignore_criteria['method']
-        min_size = settings.ignore_criteria['size_of_object']
-
         # Strip whitespaces from every element of the ignore_list
         ignore_list = [x.strip(' ') for x in self.ignore_list]
-        del_count = 0
         if self.file_type == settings.APACHE_COMMON:
-            # Entries with these IDs will be removed
-            del_count = self.session.query(Token_common).filter(
+            # Ignore criteria
+            status_code = settings.apache_ignore_criteria['status_code']
+            # Request method
+            method = settings.apache_ignore_criteria['method']
+            min_size = settings.apache_ignore_criteria['size_of_object']
+
+            self.session.query(Token_common).filter(
                 or_(Token_common.status_code != status_code,
                     ~Token_common.method.in_(method),
                     Token_common.request_ext.in_(ignore_list),
                     Token_common.size_of_object <= min_size)).delete(
                 synchronize_session='fetch')
-            self.session.commit()
 
         elif self.file_type == settings.SQUID:
-            pass
+            # Ignore criteria
+            status_code = settings.squid_ignore_criteria['status_code']
+            # Request method
+            method = settings.squid_ignore_criteria['method']
+            min_size = settings.squid_ignore_criteria['size_of_object']
 
-        self.send_all_data(del_count)
+            self.session.query(Token_squid).filter(
+                or_(Token_squid.status_code != status_code,
+                    ~Token_squid.method.in_(method),
+                    Token_squid.request_ext.in_(ignore_list),
+                    Token_squid.bytes_delivered <= min_size)).delete(
+                synchronize_session='fetch')
+
+        self.session.commit()
+        self.send_all_data()
         settings.Session.remove()
 
-    def send_all_data(self, del_count):
+    def send_all_data(self):
         """
         Send filtered data to GUI
-        :param del_count: Number of rows deleted
         """
         if self.file_type == settings.APACHE_COMMON:
+            self.update_progress_signal.emit(
+                [-1, settings.APACHE_COMMON_HEADING])
             # Send result to GUI
             self.line_count_signal.emit(
                 self.session.query(Token_common).count())
@@ -230,6 +247,23 @@ class FilteringThread(LogFile, QtCore.QThread):
                         token_obj.resource_requested]
                 # *text is used to expand list in place
                 msg = [i, settings.APACHE_COMMON_OUTPUT_FORMAT.format(*text)]
+                self.result_item_signal.emit(msg)
+
+        elif self.file_type == settings.SQUID:
+            self.update_progress_signal.emit(
+                [-1, settings.SQUID_HEADING])
+            self.line_count_signal.emit(
+                self.session.query(Token_squid).count())
+
+            for i, token_obj in enumerate(self.session.query(
+                    Token_squid).all()):
+                text = [i + 1, str(token_obj.date_time), token_obj.duration,
+                        token_obj.ip_address, token_obj.status_code,
+                        token_obj.bytes_delivered, token_obj.user,
+                        token_obj.hierarchy_code, token_obj.type_content,
+                        token_obj.method, token_obj.url]
+                # *text is used to expand list in place
+                msg = [i, settings.SQUID_OUTPUT_FORMAT.format(*text)]
                 self.result_item_signal.emit(msg)
 
 
@@ -248,46 +282,50 @@ class SessionThread(LogFile, QtCore.QThread):
 
     def run(self):
         self.init_tables()
+        Token_type = None
 
         if self.file_type == settings.APACHE_COMMON:
+            Token_type = Token_common
+        elif self.file_type == settings.SQUID:
+            Token_type = Token_squid
             # Get all distinct ip addresses
-            all_entries = self.session.query(Token_common.ip_address).order_by(
-                'ip_address').distinct().all()
+        all_entries = self.session.query(Token_type.ip_address).order_by(
+            'ip_address').distinct().all()
 
-            self.total_count_signal.emit(len(all_entries))
+        self.total_count_signal.emit(len(all_entries))
 
-            # Create sessions for each IP address
-            for i, entry in enumerate(all_entries):
+        # Create sessions for each IP address
+        for i, entry in enumerate(all_entries):
 
-                # Get all entries for an ip address
-                same_ip_entries = self.session.query(Token_common).filter(
-                    Token_common.ip_address == entry.ip_address).order_by(
-                    Token_common.date_time).all()
+            # Get all entries for an ip address
+            same_ip_entries = self.session.query(Token_type).filter(
+                Token_type.ip_address == entry.ip_address).order_by(
+                Token_type.date_time).all()
 
-                total_session_time = timedelta(0)
+            total_session_time = timedelta(0)
 
-                first_entry = same_ip_entries.pop(0)
-                # Add the first entry to sessions.
-                self.insert_item(first_entry, True)
-                # Last entry time is the datetime of the last entry processed
-                last_entry_time = first_entry.date_time
+            first_entry = same_ip_entries.pop(0)
+            # Add the first entry to sessions.
+            self.insert_item(first_entry, True)
+            # Last entry time is the datetime of the last entry processed
+            last_entry_time = first_entry.date_time
 
-                for e in same_ip_entries:
-                    # Calculate new session time
-                    s_time = e.date_time - last_entry_time
-                    # If new session time is greater than threshold
-                    if s_time + total_session_time > self.session_timer:
-                        # Create new session
-                        self.insert_item(e, True)
-                        total_session_time = timedelta(0)
-                    # If new session time is not greater than threshold
-                    else:
-                        total_session_time = s_time + total_session_time
-                        self.insert_item(e, False, total_session_time)
-                    last_entry_time = e.date_time
-                self.update_progress_signal.emit([i, None])
-                # Generating sessions completed
-                self.step_completed_signal.emit(1)
+            for e in same_ip_entries:
+                # Calculate new session time
+                s_time = e.date_time - last_entry_time
+                # If new session time is greater than threshold
+                if s_time + total_session_time > self.session_timer:
+                    # Create new session
+                    self.insert_item(e, True)
+                    total_session_time = timedelta(0)
+                # If new session time is not greater than threshold
+                else:
+                    total_session_time = s_time + total_session_time
+                    self.insert_item(e, False, total_session_time)
+                last_entry_time = e.date_time
+            self.update_progress_signal.emit([i, None])
+            # Generating sessions completed
+            self.step_completed_signal.emit(1)
 
         self.send_results()
         settings.Session.remove()
@@ -317,8 +355,13 @@ class SessionThread(LogFile, QtCore.QThread):
                                 session_time contains the new value of total
                                 session time
         """
-        url_obj = get_or_create(
-            self.session, Uurl, url=token_object.resource_requested)
+        if self.file_type == settings.APACHE_COMMON:
+            url_obj = get_or_create(
+                self.session, Uurl, url=token_object.resource_requested)
+        elif self.file_type == settings.SQUID:
+            url_obj = get_or_create(
+                self.session, Uurl, url=token_object.url)
+
         # If this is a new session
         if new_session:
             # Create session object

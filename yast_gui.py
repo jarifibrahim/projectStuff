@@ -101,17 +101,9 @@ class YastGui(QtGui.QMainWindow):
         self.ui.progressBar.setValue(0)
         self.ui.records_processed_value_label.setText("0/0")
         self.ui.records_processed_label.setText("Records processed")
-
+        self.ui.output_textEdit.setText("")
         msg = "Please wait. Tokenization in progress."
         self.ui.status_lineEdit.setText(msg)
-
-
-        #heading = settings.APACHE_COMMON_HEADING
-        #self.ui.output_textEdit.setText(heading)
-
-    
-        #heading = settings.SQUID_HEADING
-        #self.ui.output_textEdit.setText(heading)
 
     def tokenization_completed(self):
         """ Signal handler for FINISHED signal of TokenizationThread """
@@ -167,6 +159,7 @@ class YastGui(QtGui.QMainWindow):
         self.filter_thread.line_count_signal.connect(self.set_total_count)
         self.filter_thread.result_item_signal.connect(
             self.update_progress)
+        self.filter_thread.update_progress_signal.connect(self.update_progress)
         self.filter_thread.finished.connect(self.filter_completed)
         self.filter_thread.start()
 
@@ -181,8 +174,7 @@ class YastGui(QtGui.QMainWindow):
         self.ui.B_Close.setEnabled(False)
         msg = "Log Filtering in progress. Please wait..."
         self.ui.status_lineEdit.setText(msg)
-        heading = settings.APACHE_COMMON_HEADING
-        self.ui.output_textEdit.setText(heading)
+        self.ui.output_textEdit.setText("")
         self.ui.progressBar.setValue(0)
 
     def filter_completed(self):

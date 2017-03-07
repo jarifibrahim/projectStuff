@@ -26,7 +26,7 @@ class Token_common(settings.Base):
     user_id = Column(String(50))
     date_time = Column(DateTime)
     time_zone = Column(String(50))
-    method = Column(String(50))
+    method = Column(String(10))
     resource_requested = Column(String(100))
     request_ext = Column(String(50), index=True)
     protocol = Column(String(50))
@@ -60,22 +60,23 @@ class Token_combined(Base):
     User_agent = Column(String(200))
 '''
 
+
 class Token_squid(settings.Base):
     __tablename__ = 'Token_squid'
 
     token_id = Column(Integer, primary_key=True)
-    time = Column(Integer)
+    date_time = Column(DateTime)
     duration = Column(Integer)
     ip_address = Column(String(50), index=True)
-    result_code = Column(String(50))
+    status_code = Column(Integer)
     bytes_delivered = Column(Integer)
-    method = Column(String(50))
+    method = Column(String(10))
     url = Column(String(50), index=True)
-    user = Column(String(100)) #User Identity (RFC931)
+    user = Column(String(100))  # User Identity (RFC931)
     hierarchy_code = Column(String(50))
     type_content = Column(String(50))
+    request_ext = Column(String(20), index=True)
 
-    
 
 # Defines many to many relationship between Uurl and Session Table
 association_table = Table('association', settings.Base.metadata,
