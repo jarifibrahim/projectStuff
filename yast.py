@@ -85,6 +85,9 @@ class TokenizationThread(LogFile, QtCore.QThread):
                 # Remove '"' from request method
                 method_string = item[5].replace('"', '')
 
+                # Remove DUST
+                resource_requested = item[6].split('?')[0]
+
                 # Requested URL extension
                 request_ext = item[6].split(".")[-1]
 
@@ -108,8 +111,9 @@ class TokenizationThread(LogFile, QtCore.QThread):
                     ip_address=item[0], user_identifier=item[1],
                     user_id=item[2], date_time=date_time,
                     time_zone=timezone_string, method=method_string,
-                    resource_requested=item[6], request_ext=request_ext,
-                    protocol=protocol_string, status_code=status_code,
+                    resource_requested=resource_requested,
+                    request_ext=request_ext, protocol=protocol_string,
+                    status_code=status_code,
                     size_of_object=bytes_transferred)
                 token_array.append(token_object)
                 self.send_result_signal(i, token_object)
@@ -236,12 +240,14 @@ class SessionThread(LogFile, QtCore.QThread):
     result_signal = QtCore.pyqtSignal(str)
     # To be sent after each step is completed
     step_completed_signal = QtCore.pyqtSignal(int)
+    number_of_sessions_signal = QtCore.pyqtSignal(int)
 
     def __init__(self, file_path, session_timer):
         super(SessionThread, self).__init__(file_path)
         self.session_timer = timedelta(minutes=session_timer)
 
     def run(self):
+        self.init_tables()
 
         if self.file_type == settings.APACHE_COMMON:
             # Get all distinct ip addresses
@@ -285,6 +291,19 @@ class SessionThread(LogFile, QtCore.QThread):
 
         self.send_results()
         settings.Session.remove()
+
+    def init_tables(self):
+        """ Drop sessions and url tables and create new tables.
+        This is done to clear all the previous sessions.
+        """
+
+        settings.Base.metadata.tables[
+            'session_master'].drop(bind=settings.engine)
+        settings.Base.metadata.tables['uurl'].drop(bind=settings.engine)
+
+        settings.Base.metadata.tables[
+            'session_master'].create(bind=settings.engine)
+        settings.Base.metadata.tables['uurl'].create(bind=settings.engine)
 
     def insert_item(self, token_object,
                     new_session, session_time=timedelta(0)):
@@ -358,3 +377,6 @@ class SessionThread(LogFile, QtCore.QThread):
 
         # Printing sessions completed
         self.step_completed_signal.emit(3)
+
+        self.number_of_sessions_signal.emit(
+            self.session.query(Session).count())

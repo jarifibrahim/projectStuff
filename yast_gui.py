@@ -1,4 +1,4 @@
-from PyQt4 import QtGui
+from PyQt4 import QtGui, QtCore
 from ui_mainwindow import Ui_MainWindow
 import sys
 import settings
@@ -71,6 +71,9 @@ class YastGui(QtGui.QMainWindow):
         """
         Tokenization handler is invoked by the start tokenization button
         """
+        self.timer = QtCore.QElapsedTimer()
+        self.timer.start()
+
         self.init_database()
 
         self.file_path = self.ui.file_path_textEdit.text()
@@ -118,8 +121,9 @@ class YastGui(QtGui.QMainWindow):
         self.ui.B_Save.setEnabled(True)
         self.ui.B_Close.setEnabled(True)
         count = self.ui.records_processed_value_label.text().split('/')[0]
-        msg = "Tokenization completed. Successfully processed {} lines. "\
-            "Please start clean or sessionization.".format(count)
+        msg = "Tokenization completed. Successfully processed {0} lines. "\
+            "Total Time Taken: {1: .2f} secs. Please start clean or "\
+            "sessionization.".format(count, self.timer.elapsed() / 1000)
         self.ui.status_lineEdit.setText(msg)
         QtGui.QMessageBox.information(
             self.ui.centralwidget, "YAST - Processing Completed", msg)
@@ -153,6 +157,9 @@ class YastGui(QtGui.QMainWindow):
 
     def filter_handler(self):
         """ Filter handler is invoked by start cleaning button """
+        self.timer = QtCore.QElapsedTimer()
+        self.timer.start()
+
         ignore_list = self.ui.ignore_ext_lineEdit.text().split(",")
 
         self.filter_thread = FilteringThread(self.file_path, ignore_list)
@@ -187,9 +194,10 @@ class YastGui(QtGui.QMainWindow):
 
         self.ui.B_Save.setEnabled(True)
         self.ui.B_Close.setEnabled(True)
-        msg = "Log Filtering completed successfully. Deleted %s entries."\
-            "\nYou can now sessionize the log file." % (
-                self.old_total_records - self.total_records)
+        msg = "Log Filtering completed successfully. Deleted %s entries. "\
+            "Total time taken: %.2f secs. \nYou can now sessionize the log "\
+            "file." % (self.old_total_records - self.total_records,
+                       self.timer.elapsed() / 1000)
         self.ui.status_lineEdit.setText(msg)
         QtGui.QMessageBox.information(
             self.ui.centralwidget, "YAST - Processing Started", msg)
@@ -198,11 +206,16 @@ class YastGui(QtGui.QMainWindow):
         """ Invoked by start sessionization button """
 
         session_timer = self.ui.time_spinBox.value()
+        self.timer = QtCore.QElapsedTimer()
+        self.timer.start()
+
         self.session_thread = SessionThread(self.file_path, session_timer)
         self.session_thread.started.connect(self.sessionization_started)
         self.session_thread.update_progress_signal.connect(
             self.update_progress)
         self.session_thread.total_count_signal.connect(self.set_total_count)
+        self.session_thread.number_of_sessions_signal.connect(
+            self.total_sessions_count)
         self.session_thread.step_completed_signal.connect(self.step_completed)
         self.session_thread.finished.connect(self.sessionization_completed)
         self.session_thread.start()
@@ -229,10 +242,10 @@ class YastGui(QtGui.QMainWindow):
 
         self.ui.B_Save.setEnabled(True)
         self.ui.B_Close.setEnabled(True)
-        msg = "Sessionization successfully completed."
+        msg = "Sucessfully generated {0} sessions. Total time taken: "\
+            "{1:.2f} secs.".format(
+                self.total_sessions, self.timer.elapsed() / 1000)
         self.ui.status_lineEdit.setText(msg)
-
-        msg = "Sucessfully generated {} sessions".format(self.total_records)
         QtGui.QMessageBox.information(
             self.ui.centralwidget, "YAST - Processing Completed", msg)
 
@@ -241,6 +254,9 @@ class YastGui(QtGui.QMainWindow):
         msg = "Step {}/3 of sessionization in progress. Please wait".format(
             step)
         self.ui.status_lineEdit.setText(msg)
+
+    def total_sessions_count(self, count):
+        self.total_sessions = count
 
 
 def main():
