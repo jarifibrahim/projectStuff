@@ -480,9 +480,9 @@
      <widget class="QComboBox" name="log_format_comboBox">
       <property name="geometry">
        <rect>
-        <x>20</x>
+        <x>10</x>
         <y>30</y>
-        <width>141</width>
+        <width>161</width>
         <height>22</height>
        </rect>
       </property>
@@ -500,17 +500,17 @@
       </property>
       <item>
        <property name="text">
-        <string>Proxy Log File</string>
+        <string>Apache Common</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>Web Log File</string>
+        <string>Apache Combined</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>Squid Log File</string>
+        <string>Squid Proxy</string>
        </property>
       </item>
      </widget>
@@ -666,7 +666,7 @@
       </font>
      </property>
      <property name="title">
-      <string>Clean</string>
+      <string>Filter</string>
      </property>
      <widget class="QPushButton" name="B_CStart">
       <property name="enabled">
@@ -961,7 +961,7 @@
      <x>0</x>
      <y>0</y>
      <width>1350</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
