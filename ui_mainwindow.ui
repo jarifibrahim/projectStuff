@@ -916,12 +916,13 @@
     </property>
     <property name="font">
      <font>
+      <pointsize>10</pointsize>
       <weight>75</weight>
       <bold>true</bold>
      </font>
     </property>
     <property name="text">
-     <string>Progess:</string>
+     <string>Progress:</string>
     </property>
    </widget>
    <widget class="QLabel" name="records_processed_value_label">
@@ -960,7 +961,7 @@
      <x>0</x>
      <y>0</y>
      <width>1350</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

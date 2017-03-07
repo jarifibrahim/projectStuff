@@ -102,8 +102,13 @@ class YastGui(QtGui.QMainWindow):
         msg = "Please wait. Tokenization in progress."
         self.ui.status_lineEdit.setText(msg)
 
-        heading = settings.APACHE_COMMON_HEADING
-        self.ui.output_textEdit.setText(heading)
+
+        #heading = settings.APACHE_COMMON_HEADING
+        #self.ui.output_textEdit.setText(heading)
+
+    
+        #heading = settings.SQUID_HEADING
+        #self.ui.output_textEdit.setText(heading)
 
     def tokenization_completed(self):
         """ Signal handler for FINISHED signal of TokenizationThread """
