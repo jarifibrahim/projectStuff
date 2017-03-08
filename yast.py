@@ -6,6 +6,7 @@ from models import Token_common, Token_squid, Uurl, Session, get_or_create
 import settings
 from sqlalchemy import or_
 from PyQt4 import QtCore
+import logging
 
 
 class LogFile(object):
@@ -36,12 +37,15 @@ class LogFile(object):
         if regex_squid.match(line):
             # Move cursor back to original
             self.file.seek(orig)
+            logging.info("File type SQUID detected")
             return settings.SQUID
         elif regex_common.match(line):
             self.file.seek(orig)
+            logging.info("File type APACHE COMMON detected")
             return settings.APACHE_COMMON
         elif regex_combined.match(line):
             self.file.seek(orig)
+            logging.info("File type APACHE COMBINED detected")
             return settings.APACHE_COMBINED
         else:
             raise ValueError("Unrecognized file format.\nWe currently support "
@@ -58,6 +62,8 @@ class TokenizationThread(LogFile, QtCore.QThread):
         super(TokenizationThread, self).__init__(file_path)
         self.number_of_lines = self._count_lines()
         if self.file_type != f_type:
+            logging.error("Incorrect file type. Detected type: %d, selected "
+                          "type: %d" % (self.file_type, f_type))
             raise TypeError
 
     def _count_lines(self):
@@ -72,7 +78,7 @@ class TokenizationThread(LogFile, QtCore.QThread):
         """
         # Send number of lines to the GUI
         self.line_count_signal.emit(self.number_of_lines)
-
+        logging.info("Total number of lines in file %d" % self.number_of_lines)
         if self.file_type == settings.APACHE_COMMON:
             token_array = []
             self.update_progress_signal.emit(
@@ -119,9 +125,6 @@ class TokenizationThread(LogFile, QtCore.QThread):
                     size_of_object=bytes_transferred)
                 token_array.append(token_object)
                 self.send_result_signal(i, token_object)
-            self.session.bulk_save_objects(token_array)
-            self.session.commit()
-            settings.Session.remove()
 
         elif self.file_type == settings.SQUID:
             token_array = []
@@ -148,9 +151,10 @@ class TokenizationThread(LogFile, QtCore.QThread):
                 )
                 token_array.append(token_object)
                 self.send_result_signal(i, token_object)
-            self.session.bulk_save_objects(token_array)
-            self.session.commit()
-            settings.Session.remove()
+        self.session.bulk_save_objects(token_array)
+        self.session.commit()
+        logging.info("All tokens inserted into database")
+        settings.Session.remove()
 
     def send_result_signal(self, i, token_obj):
         """
@@ -199,6 +203,7 @@ class FilteringThread(LogFile, QtCore.QThread):
         """
         # Strip whitespaces from every element of the ignore_list
         ignore_list = [x.strip(' ') for x in self.ignore_list]
+        logging.info("File type to remove: %s" % str(ignore_list))
         if self.file_type == settings.APACHE_COMMON:
             # Ignore criteria
             status_code = settings.apache_ignore_criteria['status_code']
@@ -284,6 +289,7 @@ class SessionThread(LogFile, QtCore.QThread):
     def __init__(self, file_path, session_timer):
         super(SessionThread, self).__init__(file_path)
         self.session_timer = timedelta(minutes=session_timer)
+        logging.info("Session timer: %s" % str(self.session_timer))
 
     def run(self):
         self.init_tables()
@@ -331,6 +337,7 @@ class SessionThread(LogFile, QtCore.QThread):
             self.update_progress_signal.emit([i, None])
             # Generating sessions completed
             self.step_completed_signal.emit(1)
+        logging.info("All sessions created. Sending result to the GUI")
         self.session.commit()
         self.send_results()
         settings.Session.remove()
@@ -347,6 +354,8 @@ class SessionThread(LogFile, QtCore.QThread):
         settings.Base.metadata.tables[
             'session_master'].create(bind=settings.engine)
         settings.Base.metadata.tables['uurl'].create(bind=settings.engine)
+
+        logging.info("Sessionization Tables created")
 
     def insert_item(self, token_object,
                     new_session, session_time=timedelta(0)):
@@ -402,7 +411,7 @@ class SessionThread(LogFile, QtCore.QThread):
         url_query = self.session.query(Uurl).all()
         for q in url_query:
             self.update_progress_signal.emit([q.id, str(q)])
-
+        logging.info("All urls sent to the GUI")
         # Printing urls completed
         self.step_completed_signal.emit(2)
 
@@ -421,7 +430,7 @@ class SessionThread(LogFile, QtCore.QThread):
         session_query = self.session.query(Session).all()
         for s in session_query:
             self.update_progress_signal.emit([last_id + s.id - 1, str(s)])
-
+        logging.info("All sessions sent to the GUI")
         # Printing sessions completed
         self.step_completed_signal.emit(3)
 

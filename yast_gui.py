@@ -1,6 +1,7 @@
 from PyQt4 import QtGui, QtCore
 from ui_mainwindow import Ui_MainWindow
 import sys
+import logging
 import settings
 from yast import TokenizationThread, FilteringThread, SessionThread
 
@@ -8,7 +9,7 @@ from yast import TokenizationThread, FilteringThread, SessionThread
 class YastGui(QtGui.QMainWindow):
     def __init__(self):
         super(YastGui, self).__init__()
-
+        logging.info("Initializing GUI")
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.total_records = 0
@@ -35,12 +36,17 @@ class YastGui(QtGui.QMainWindow):
         self.ui.actionSave_As.setShortcut("Ctrl+S")
         self.ui.actionExit.triggered.connect(self.close_application)
 
+        logging.info("GUI initialization completed")
+
     def choose_file(self):
         """ On click event handler for choose file button """
+        logging.info("File select dialog opened")
         fname = QtGui.QFileDialog.getOpenFileName(
             self.ui.centralwidget, "YAST - Open Dialog")
         if not fname:
+            logging.info("No file selected")
             return
+        logging.info("%s file selected" % fname)
         self.ui.file_path_textEdit.setText(fname)
         self.ui.status_lineEdit.setText("Please start Tokenization.")
         self.ui.token_frame.setEnabled(True)
@@ -60,6 +66,7 @@ class YastGui(QtGui.QMainWindow):
         name = QtGui.QFileDialog.getSaveFileName(
             self.ui.centralwidget, 'YAST - Save File',
             filter="Comma seperated Variable File (*.csv)")
+        logging.info("Saving output to file %s" % name)
         file = open(name, 'w')
         result = self.ui.output_textEdit.toPlainText()
         # Replace all tab characters by comma
@@ -67,6 +74,7 @@ class YastGui(QtGui.QMainWindow):
         # Remove all white spaces
         result = result.replace(" ", "")
         file.write(result)
+        logging.info("Writing data to file completed")
         file.close()
 
     def tokenization_handler(self):
@@ -84,11 +92,13 @@ class YastGui(QtGui.QMainWindow):
         self.file_path = self.ui.file_path_textEdit.text()
         try:
             self.thread = TokenizationThread(self.file_path, f_type)
+            logging.info("Tokenization Thread created")
         except (OSError, IOError) as e:
             msg = "Unable to open file"
             QtGui.QMessageBox.critical(
                 self.ui.centralwidget, "YAST - Error", msg + ": " + str(e))
             self.ui.token_frame.setEnabled(False)
+            logging.exception("Failed to open file %s" % self.file_path)
             return
         except TypeError:
             msg = "Selected log file doesn't match with the selected log "\
@@ -98,6 +108,14 @@ class YastGui(QtGui.QMainWindow):
             QtGui.QMessageBox.critical(
                 self.ui.centralwidget, "YAST - Error", msg)
             self.ui.token_frame.setEnabled(False)
+            logging.exception("Incorrect file format selected")
+            return
+        except ValueError as e:
+            self.ui.status_lineEdit.setText(str(e))
+            QtGui.QMessageBox.critical(
+                self.ui.centralwidget, "YAST - Error", str(e))
+            self.ui.token_frame.setEnabled(False)
+            logging.exception("Unsupported file format")
             return
 
         self.thread.update_progress_signal.connect(self.update_progress)
@@ -108,6 +126,7 @@ class YastGui(QtGui.QMainWindow):
 
     def tokenization_started(self):
         """ Signal handler for STARTED signal of TokenizationThread """
+        logging.info("Tokenization thread started")
         self.ui.token_frame.setEnabled(False)
         self.ui.B_Save.setEnabled(False)
         self.ui.B_Close.setEnabled(False)
@@ -119,6 +138,7 @@ class YastGui(QtGui.QMainWindow):
 
     def tokenization_completed(self):
         """ Signal handler for FINISHED signal of TokenizationThread """
+        logging.info("Tokenization thread completed")
         self.ui.clean_frame.setEnabled(True)
         self.ui.session_frame.setEnabled(True)
 
@@ -158,6 +178,7 @@ class YastGui(QtGui.QMainWindow):
         # create new tables
         settings.Base.metadata.create_all(settings.engine)
         settings.session.commit()
+        logging.info("All tables created")
 
     def filter_handler(self):
         """ Filter handler is invoked by start cleaning button """
@@ -167,6 +188,7 @@ class YastGui(QtGui.QMainWindow):
         ignore_list = self.ui.ignore_ext_lineEdit.text().split(",")
 
         self.filter_thread = FilteringThread(self.file_path, ignore_list)
+        logging.info("Filter thread created")
         self.filter_thread.started.connect(self.filter_started)
         self.filter_thread.line_count_signal.connect(self.set_total_count)
         self.filter_thread.result_item_signal.connect(
@@ -177,7 +199,7 @@ class YastGui(QtGui.QMainWindow):
 
     def filter_started(self):
         """ Signal handler for STARTED signal of FilteringThread """
-
+        logging.info("Filter thread started")
         self.ui.token_frame.setEnabled(False)
         self.ui.clean_frame.setEnabled(False)
         self.ui.session_frame.setEnabled(False)
@@ -191,7 +213,7 @@ class YastGui(QtGui.QMainWindow):
 
     def filter_completed(self):
         """ Signal handler for FINISHED signal of FilteringThread """
-
+        logging.info("Filter thread completed")
         self.ui.token_frame.setEnabled(True)
         self.ui.clean_frame.setEnabled(True)
         self.ui.session_frame.setEnabled(True)
@@ -214,6 +236,7 @@ class YastGui(QtGui.QMainWindow):
         self.timer.start()
 
         self.session_thread = SessionThread(self.file_path, session_timer)
+        logging.info("Sessionization thread created")
         self.session_thread.started.connect(self.sessionization_started)
         self.session_thread.update_progress_signal.connect(
             self.update_progress)
@@ -226,7 +249,7 @@ class YastGui(QtGui.QMainWindow):
 
     def sessionization_started(self):
         """ Signal handler for STARTED signal of SessionizationThread """
-
+        logging.info("Sessionization thread started")
         self.ui.token_frame.setEnabled(False)
         self.ui.clean_frame.setEnabled(False)
         self.ui.session_frame.setEnabled(False)
@@ -239,7 +262,7 @@ class YastGui(QtGui.QMainWindow):
 
     def sessionization_completed(self):
         """ Signal handler for FINISHED signal of SessionizationThread """
-
+        logging.info("Sessionization completed")
         self.ui.token_frame.setEnabled(True)
         self.ui.clean_frame.setEnabled(True)
         self.ui.session_frame.setEnabled(True)
@@ -264,6 +287,11 @@ class YastGui(QtGui.QMainWindow):
 
 
 def main():
+    logging.basicConfig(
+        filename='yast.log', level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%m/%d/%Y %I:%M:%S %p')
+    logging.info('Started YAST')
     app = QtGui.QApplication(sys.argv)
     gui = YastGui()
     gui.show()

@@ -35,9 +35,9 @@ class Token_common(settings.Base):
 
     def __str__(self):
         return settings.APACHE_COMMON_OUTPUT_FORMAT.format(
-            self.token_id, self.ip_address, self.user_identifier,
+            str(self.token_id), self.ip_address, self.user_identifier,
             self.user_id, str(self.date_time), self.time_zone, self.method,
-            self.status_code, self.size_of_object, self.protocol,
+            str(self.status_code), str(self.size_of_object), self.protocol,
             self.resource_requested)
 
 
