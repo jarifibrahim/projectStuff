@@ -39,10 +39,28 @@ apache_ignore_criteria = {
 
 
 APACHE_COMBINED = 1
+
+APACHE_COMBINED_OUTPUT_FORMAT = ("{: ^5}\t{: ^15}\t{: ^30}\t{: ^30}"
+                               "\t{: ^20}\t{: ^20}\t{: ^20}\t"
+                               "{: ^20}\t{: ^20}\t{: ^20}\t{: ^30}{: ^40}{:<}")
+
 APACHE_COMBINED_LOG_RE = r'^([0-9\.]+)\s((?:\w+|-))\s([\w\d_-]*)\s\[([\d\/'\
     r'\w:]*)\s((?:\-|\+)\d+)\]\s\"(\w+)\s(\S+)\s([\w\d\/\.]*)\"\s(\d{3})\s'\
     r'(\d+) (\".*\") (\".*\")$'
 
+APACHE_COMBINED_HEADING = APACHE_COMBINED_OUTPUT_FORMAT.format(
+    "ID", "IP Address", "User Identifier", "User ID", "Date Time",
+    "Time zone", "Method", "Status Code", "Size of Object", "Protocol",
+    "Resource Requested", "Referer", "User Agent")
+
+apache_ignore_criteria = {
+    # Entries with status code other than 200 will be ignored
+    'status_code': 200,
+    # Entries with request method other than following will be ignored
+    'method': ["GET", "POST"],
+    # Entries with size of object less than following value will be ignored
+    'size_of_object': 0
+}
 
 SQUID = 2
 SQUID_OUTPUT_FORMAT = ("{0: <5}\t{3: <15}\t{1: <20}\t{2: ^10}\t"

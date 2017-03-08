@@ -41,8 +41,8 @@ class Token_common(settings.Base):
             self.resource_requested)
 
 
-'''
-class Token_combined(Base):
+
+class Token_combined(settings.Base):
     __tablename__ = 'Token_combined'
 
     token_id = Column(Integer, primary_key=True)
@@ -53,12 +53,12 @@ class Token_combined(Base):
     time_zone = Column(String(50))
     method = Column(String(50))
     resource_requested = Column(String(300), index=True)
+    request_ext = Column(String(50), index=True)
     protocol = Column(String(50))
     status_code = Column(String(50))
     size_of_object = Column(String(50))
-    Referer = Column(String(300))
-    User_agent = Column(String(200))
-'''
+    referer = Column(String(300))
+    user_agent = Column(String(200))
 
 
 class Token_squid(settings.Base):
