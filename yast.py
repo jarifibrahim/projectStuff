@@ -51,9 +51,11 @@ class TokenizationThread(LogFile, QtCore.QThread):
     line_count_signal = QtCore.pyqtSignal(int)
     update_progress_signal = QtCore.pyqtSignal(list)
 
-    def __init__(self, file_path):
+    def __init__(self, file_path, f_type):
         super(TokenizationThread, self).__init__(file_path)
         self.number_of_lines = self._count_lines()
+        if self.file_type != f_type:
+            raise TypeError
 
     def _count_lines(self):
         count = sum(1 for _ in self.file)
@@ -74,7 +76,7 @@ class TokenizationThread(LogFile, QtCore.QThread):
                 [-1, settings.APACHE_COMMON_HEADING])
             for i, line in enumerate(self.file):
                 item = line.split(" ")
-                # modelremove '[' from date
+                # Remove '[' from date
                 datetime_string = item[3].replace('[', '')
                 # Remove ']' from timezone
                 timezone_string = item[4].replace(']', '')

@@ -22,6 +22,8 @@ class YastGui(QtGui.QMainWindow):
         self.ui.B_choose_file.clicked.connect(self.choose_file)
         self.ui.file_path_textEdit.textChanged.connect(
             lambda x: self.ui.token_frame.setEnabled(True))
+        self.ui.log_format_comboBox.currentIndexChanged.connect(
+            lambda x: self.ui.token_frame.setEnabled(True))
         self.ui.B_Close.clicked.connect(self.close_application)
         self.ui.B_Save.clicked.connect(self.file_save)
         self.ui.B_TStart.clicked.connect(self.tokenization_handler)
@@ -73,16 +75,24 @@ class YastGui(QtGui.QMainWindow):
         """
         self.timer = QtCore.QElapsedTimer()
         self.timer.start()
-
+        f_type = int(self.ui.log_format_comboBox.currentIndex())
         self.init_database()
 
         self.file_path = self.ui.file_path_textEdit.text()
         try:
-            self.thread = TokenizationThread(self.file_path)
+            self.thread = TokenizationThread(self.file_path, f_type)
         except (OSError, IOError) as e:
             msg = "Unable to open file"
             QtGui.QMessageBox.critical(
                 self.ui.centralwidget, "YAST - Error", msg + ": " + str(e))
+            self.ui.token_frame.setEnabled(False)
+            return
+        except TypeError:
+            msg = "Selected log file doesn't match with the selected log "\
+                "format ({}). Please verify file format."
+            msg = msg.format(self.ui.log_format_comboBox.currentText())
+            QtGui.QMessageBox.critical(
+                self.ui.centralwidget, "YAST - Error", msg)
             self.ui.token_frame.setEnabled(False)
             return
 

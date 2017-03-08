@@ -15,7 +15,7 @@ Session = orm.scoped_session(Session_Factory)
 session = Session()
 Base = declarative_base()
 
-APACHE_COMMON = 1
+APACHE_COMMON = 0
 # Used while printing output
 APACHE_COMMON_OUTPUT_FORMAT = ("{: ^5}\t{: ^15}\t{: ^30}\t{: ^30}"
                                "\t{: ^20}\t{: ^20}\t{: ^20}\t"
@@ -32,15 +32,15 @@ apache_ignore_criteria = {
     'status_code': 200,
     # Entries with request method other than following will be ignored
     'method': ["GET", "POST"],
-    # Entries with size of object less than following value willbe ignored
+    # Entries with size of object less than following value will be ignored
     'size_of_object': 0
 }
 
 
 SQUID = 2
-SQUID_OUTPUT_FORMAT = ("{: <5}\t{: <20}\t{: <16}\t{: <15}"
-                       "\t{: <30}\t{: <10}\t{: <15}\t"
-                       "{: <20}\t{: <20}\t{: <15}\t{:<}")
+SQUID_OUTPUT_FORMAT = ("{0: <5}\t{3: <15}\t{1: <20}\t{2: ^10}\t"
+                       "{5: <20}\t{4: <17}\t{6: <15}\t"
+                       "{7: >30}\t{8: <30}\t{9: <15}\t{10: <}")
 
 SQUID_HEADING = SQUID_OUTPUT_FORMAT.format(
     "ID", "Time", "Duration", "IP Address", "Result Code", "Bytes Delivered",
