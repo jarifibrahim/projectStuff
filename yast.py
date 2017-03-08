@@ -2,7 +2,7 @@
 
 import re
 from datetime import datetime, timedelta
-from models import Token_common, Token_squid, Uurl, Session, get_or_create
+from models import Token_common, Token_squid, Token_combined, Uurl, Session, get_or_create
 import settings
 from sqlalchemy import or_
 from PyQt4 import QtCore
@@ -126,6 +126,54 @@ class TokenizationThread(LogFile, QtCore.QThread):
                 token_array.append(token_object)
                 self.send_result_signal(i, token_object)
 
+
+        elif self.file_type == settings.APACHE_COMBINED:
+            token_array = []
+            self.update_progress_signal.emit(
+                [-1, settings.APACHE_COMBINED_HEADING])
+            for i, line in enumerate(self.file):
+                item = line.split(" ")
+                # Remove '[' from date
+                datetime_string = item[3].replace('[', '')
+                # Remove ']' from timezone
+                timezone_string = item[4].replace(']', '')
+
+                # Remove '"' from request method
+                method_string = item[5].replace('"', '')
+
+                # Remove DUST
+                resource_requested = item[6].split('?')[0]
+
+                # Requested URL extension
+                request_ext = item[6].split(".")[-1]
+
+                # Remove '"' from protocol
+                protocol_string = item[7].replace('"', '')
+
+                date_time = datetime.strptime(
+                    datetime_string, settings.DATETIME_FORMAT)
+
+                # Try to convert bytes transferred to int
+                try:
+                    bytes_transferred = int(item[9])
+                except ValueError:
+                    bytes_transferred = 0
+
+                try:
+                    status_code = int(item[8])
+                except ValueError:
+                    status_code = 0
+                token_object = Token_combined(
+                    ip_address=item[0], user_identifier=item[1],
+                    user_id=item[2], date_time=date_time,
+                    time_zone=timezone_string, method=method_string,
+                    resource_requested=resource_requested,
+                    request_ext=request_ext, protocol=protocol_string,
+                    status_code=status_code,
+                    size_of_object=bytes_transferred, referer=item[11], user_agent=item[12])
+                token_array.append(token_object)
+                self.send_result_signal(i, token_object)
+
         elif self.file_type == settings.SQUID:
             token_array = []
             self.update_progress_signal.emit([-1, settings.SQUID_HEADING])
@@ -171,6 +219,16 @@ class TokenizationThread(LogFile, QtCore.QThread):
                     token_obj.protocol, token_obj.resource_requested]
 
             msg = [i, settings.APACHE_COMMON_OUTPUT_FORMAT.format(*text)]
+
+        elif self.file_type == settings.APACHE_COMBINED:
+            text = [i + 1, token_obj.ip_address, token_obj.user_identifier,
+                    token_obj.user_id, str(token_obj.date_time),
+                    token_obj.time_zone, token_obj.method,
+                    token_obj.status_code, token_obj.size_of_object,
+                    token_obj.protocol, token_obj.resource_requested,
+                    token_obj.referer, token_obj.user_agent]
+
+            msg = [i, settings.APACHE_COMBINED_OUTPUT_FORMAT.format(*text)]
 
         elif self.file_type == settings.SQUID:
             text = [i + 1, str(token_obj.date_time), token_obj.duration,
@@ -218,6 +276,20 @@ class FilteringThread(LogFile, QtCore.QThread):
                     Token_common.size_of_object <= min_size)).delete(
                 synchronize_session='fetch')
 
+        elif self.file_type == settings.APACHE_COMBINED:
+            # Ignore criteria
+            status_code = settings.apache_ignore_criteria['status_code']
+            # Request method
+            method = settings.apache_ignore_criteria['method']
+            min_size = settings.apache_ignore_criteria['size_of_object']
+
+            self.session.query(Token_combined).filter(
+                or_(Token_combined.status_code != status_code,
+                    ~Token_combined.method.in_(method),
+                    Token_combined.request_ext.in_(ignore_list),
+                    Token_combined.size_of_object <= min_size)).delete(
+                synchronize_session='fetch')
+
         elif self.file_type == settings.SQUID:
             # Ignore criteria
             status_code = settings.squid_ignore_criteria['status_code']
@@ -257,6 +329,26 @@ class FilteringThread(LogFile, QtCore.QThread):
                         token_obj.resource_requested]
                 # *text is used to expand list in place
                 msg = [i, settings.APACHE_COMMON_OUTPUT_FORMAT.format(*text)]
+                self.result_item_signal.emit(msg)
+
+        elif self.file_type == settings.APACHE_COMBINED:
+            self.update_progress_signal.emit(
+                [-1, settings.APACHE_COMBINED_HEADING])
+            # Send result to GUI
+            self.line_count_signal.emit(
+                self.session.query(Token_combined).count())
+
+            for i, token_obj in enumerate(self.session.query(
+                    Token_combined).all()):
+                text = [i + 1, token_obj.ip_address,
+                        token_obj.user_identifier, token_obj.user_id,
+                        str(token_obj.date_time), token_obj.time_zone,
+                        token_obj.method, token_obj.status_code,
+                        token_obj.size_of_object, token_obj.protocol,
+                        token_obj.resource_requested, token_obj.referer,
+                        token_obj.user_agent]
+                # *text is used to expand list in place
+                msg = [i, settings.APACHE_COMBINED_OUTPUT_FORMAT.format(*text)]
                 self.result_item_signal.emit(msg)
 
         elif self.file_type == settings.SQUID:
@@ -370,6 +462,9 @@ class SessionThread(LogFile, QtCore.QThread):
                                 session time
         """
         if self.file_type == settings.APACHE_COMMON:
+            url_obj = get_or_create(
+                self.session, Uurl, url=token_object.resource_requested)
+        elif self.file_type == settings.APACHE_COMBINED:
             url_obj = get_or_create(
                 self.session, Uurl, url=token_object.resource_requested)
         elif self.file_type == settings.SQUID:
