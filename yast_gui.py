@@ -73,6 +73,9 @@ class YastGui(QtGui.QMainWindow):
         """
         Tokenization handler is invoked by the start tokenization button
         """
+        msg = "Please wait. Tokenization in progress."
+        self.ui.status_lineEdit.setText(msg)
+
         self.timer = QtCore.QElapsedTimer()
         self.timer.start()
         f_type = int(self.ui.log_format_comboBox.currentIndex())
@@ -91,6 +94,7 @@ class YastGui(QtGui.QMainWindow):
             msg = "Selected log file doesn't match with the selected log "\
                 "format ({}). Please verify file format."
             msg = msg.format(self.ui.log_format_comboBox.currentText())
+            self.ui.status_lineEdit.setText(msg)
             QtGui.QMessageBox.critical(
                 self.ui.centralwidget, "YAST - Error", msg)
             self.ui.token_frame.setEnabled(False)
@@ -112,8 +116,6 @@ class YastGui(QtGui.QMainWindow):
         self.ui.records_processed_value_label.setText("0/0")
         self.ui.records_processed_label.setText("Records processed")
         self.ui.output_textEdit.setText("")
-        msg = "Please wait. Tokenization in progress."
-        self.ui.status_lineEdit.setText(msg)
 
     def tokenization_completed(self):
         """ Signal handler for FINISHED signal of TokenizationThread """

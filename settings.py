@@ -25,7 +25,8 @@ APACHE_COMMON_HEADING = APACHE_COMMON_OUTPUT_FORMAT.format(
     "ID", "IP Address", "User Identifier", "User ID", "Date Time",
     "Time zone", "Method", "Status Code", "Size of Object", "Protocol",
     "Resource Requested")
-APACHE_COMMON_LOG_RE = '([0-9\.]+)([\w\. \-]+)\s(\[.+])\s".+"\s\d{3}.+'
+APACHE_COMMON_LOG_RE = r'^([0-9\.]+)\s((?:\w+|-))\s([\w\d_-]*)\s\[([\d\/\w:]*'\
+    r')\s((?:\-|\+)\d+)\]\s\"(\w+)\s(\S+)\s([\w\d\/\.]*)\"\s(\d{3})\s(\d+)$'
 
 apache_ignore_criteria = {
     # Entries with status code other than 200 will be ignored
@@ -37,17 +38,23 @@ apache_ignore_criteria = {
 }
 
 
+APACHE_COMBINED = 1
+APACHE_COMBINED_LOG_RE = r'^([0-9\.]+)\s((?:\w+|-))\s([\w\d_-]*)\s\[([\d\/'\
+    r'\w:]*)\s((?:\-|\+)\d+)\]\s\"(\w+)\s(\S+)\s([\w\d\/\.]*)\"\s(\d{3})\s'\
+    r'(\d+) (\".*\") (\".*\")$'
+
+
 SQUID = 2
 SQUID_OUTPUT_FORMAT = ("{0: <5}\t{3: <15}\t{1: <20}\t{2: ^10}\t"
-                       "{5: <20}\t{4: <17}\t{6: <15}\t"
-                       "{7: >30}\t{8: <30}\t{9: <15}\t{10: <}")
+                       "{5: <20} \t {4: <17} \t {6: <20} \t"
+                       "{7: <40}\t{9: <30}\t{10:<}")
 
 SQUID_HEADING = SQUID_OUTPUT_FORMAT.format(
     "ID", "Time", "Duration", "IP Address", "Result Code", "Bytes Delivered",
     "User", "Hierarchy Code", "Type Content", "Method", "URL")
 
-SQUID_LOG_RE = "(\d+\.\d+)\s+(\d+)\s+([0-9\.]+)\s(\w+\/\d{3})\s(\d+)\s(\w+)"\
-    "\s(\S+)\s(\S+)\s(\w+\/\S+)\s(\S+)"
+SQUID_LOG_RE = r"^(\d+\.\d+)\s+(\d+)\s+([0-9\.]+)\s(\w+\/\d{3})\s(\d+)\s(\w+)"\
+    r"\s(\S+)\s(\S+)\s(\w+\/\S+)\s(\S+)$"
 
 squid_ignore_criteria = {
     # Entries with status code other than 200 will be ignored

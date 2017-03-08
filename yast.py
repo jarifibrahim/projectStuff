@@ -30,20 +30,23 @@ class LogFile(object):
         # Save original position
         orig = self.file.tell()
         line = self.file.readline()
-        file_type = None
-        regex = re.compile(settings.SQUID_LOG_RE)
-        if regex.match(line):
-            file_type = settings.SQUID
-        regex = re.compile(settings.APACHE_COMMON_LOG_RE)
-        if regex.match(line):
-            file_type = settings.APACHE_COMMON
-        # Move cursor back to original
-        self.file.seek(orig)
-        if not file_type:
+        regex_squid = re.compile(settings.SQUID_LOG_RE)
+        regex_common = re.compile(settings.APACHE_COMMON_LOG_RE)
+        regex_combined = re.compile(settings.APACHE_COMBINED_LOG_RE)
+        if regex_squid.match(line):
+            # Move cursor back to original
+            self.file.seek(orig)
+            return settings.SQUID
+        elif regex_common.match(line):
+            self.file.seek(orig)
+            return settings.APACHE_COMMON
+        elif regex_combined.match(line):
+            self.file.seek(orig)
+            return settings.APACHE_COMBINED
+        else:
             raise ValueError("Unrecognized file format.\nWe currently support "
                              "only Apache Web Server Log file and Squid Proxy "
                              "Server Log file.")
-        return file_type
 
 
 class TokenizationThread(LogFile, QtCore.QThread):
@@ -133,8 +136,8 @@ class TokenizationThread(LogFile, QtCore.QThread):
                 duration = int(item.group(2))
                 status_code = item.group(4).split("/")[-1]
                 bytes_delivered = int(item.group(5))
-                request_ext = item.group(7).split(".")[-1]
                 request_url = item.group(7).split("?")[0]
+                request_ext = request_url.split(".")[-1]
                 token_object = Token_squid(
                     date_time=date_time, duration=duration,
                     ip_address=item.group(3), status_code=status_code,
@@ -328,7 +331,7 @@ class SessionThread(LogFile, QtCore.QThread):
             self.update_progress_signal.emit([i, None])
             # Generating sessions completed
             self.step_completed_signal.emit(1)
-
+        self.session.commit()
         self.send_results()
         settings.Session.remove()
 
@@ -388,7 +391,6 @@ class SessionThread(LogFile, QtCore.QThread):
         # Add url to session
         session_obj.session_urls.append(url_obj)
         self.session.add(session_obj)
-        self.session.commit()
 
     def send_results(self):
         """ Send sessionized data to the GUI """
