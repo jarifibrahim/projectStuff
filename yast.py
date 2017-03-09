@@ -126,7 +126,6 @@ class TokenizationThread(LogFile, QtCore.QThread):
                 token_array.append(token_object)
                 self.send_result_signal(i, token_object)
 
-
         elif self.file_type == settings.APACHE_COMBINED:
             token_array = []
             self.update_progress_signal.emit(
@@ -170,7 +169,7 @@ class TokenizationThread(LogFile, QtCore.QThread):
                     resource_requested=resource_requested,
                     request_ext=request_ext, protocol=protocol_string,
                     status_code=status_code,
-                    size_of_object=bytes_transferred, referer=item[11], user_agent=item[12])
+                    size_of_object=bytes_transferred, referrer=item[11], user_agent=item[12])
                 token_array.append(token_object)
                 self.send_result_signal(i, token_object)
 
@@ -226,7 +225,7 @@ class TokenizationThread(LogFile, QtCore.QThread):
                     token_obj.time_zone, token_obj.method,
                     token_obj.status_code, token_obj.size_of_object,
                     token_obj.protocol, token_obj.resource_requested,
-                    token_obj.referer, token_obj.user_agent]
+                    token_obj.referrer, token_obj.user_agent]
 
             msg = [i, settings.APACHE_COMBINED_OUTPUT_FORMAT.format(*text)]
 
@@ -345,7 +344,7 @@ class FilteringThread(LogFile, QtCore.QThread):
                         str(token_obj.date_time), token_obj.time_zone,
                         token_obj.method, token_obj.status_code,
                         token_obj.size_of_object, token_obj.protocol,
-                        token_obj.resource_requested, token_obj.referer,
+                        token_obj.resource_requested, token_obj.referrer,
                         token_obj.user_agent]
                 # *text is used to expand list in place
                 msg = [i, settings.APACHE_COMBINED_OUTPUT_FORMAT.format(*text)]
@@ -391,7 +390,9 @@ class SessionThread(LogFile, QtCore.QThread):
             Token_type = Token_common
         elif self.file_type == settings.SQUID:
             Token_type = Token_squid
-            # Get all distinct ip addresses
+        elif self.file_type == settings.APACHE_COMBINED:
+            Token_type = Token_combined
+        # Get all distinct ip addresses
         all_entries = self.session.query(Token_type.ip_address).order_by(
             'ip_address').distinct().all()
 

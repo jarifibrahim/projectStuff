@@ -26,12 +26,12 @@ class Token_common(settings.Base):
     user_id = Column(String(50))
     date_time = Column(DateTime)
     time_zone = Column(String(50))
-    method = Column(String(10))
-    resource_requested = Column(String(100))
+    method = Column(String(10), index=True)
+    resource_requested = Column(String(100), index=True)
     request_ext = Column(String(50), index=True)
     protocol = Column(String(50))
     status_code = Column(Integer, index=True)
-    size_of_object = Column(Integer)
+    size_of_object = Column(Integer, index=True)
 
     def __str__(self):
         return settings.APACHE_COMMON_OUTPUT_FORMAT.format(
@@ -41,7 +41,6 @@ class Token_common(settings.Base):
             self.resource_requested)
 
 
-
 class Token_combined(settings.Base):
     __tablename__ = 'Token_combined'
 
@@ -49,15 +48,15 @@ class Token_combined(settings.Base):
     ip_address = Column(String(50), index=True)
     user_identifier = Column(String(50))
     user_id = Column(String(50))
-    date_time = Column(String(50))
+    date_time = Column(DateTime)
     time_zone = Column(String(50))
     method = Column(String(50))
     resource_requested = Column(String(300), index=True)
     request_ext = Column(String(50), index=True)
     protocol = Column(String(50))
-    status_code = Column(String(50))
-    size_of_object = Column(String(50))
-    referer = Column(String(300))
+    status_code = Column(Integer, index=True)
+    size_of_object = Column(Integer, index=True)
+    referrer = Column(String(300))
     user_agent = Column(String(200))
 
 
@@ -68,9 +67,9 @@ class Token_squid(settings.Base):
     date_time = Column(DateTime)
     duration = Column(Integer)
     ip_address = Column(String(50), index=True)
-    status_code = Column(Integer)
-    bytes_delivered = Column(Integer)
-    method = Column(String(10))
+    status_code = Column(Integer, index=True)
+    bytes_delivered = Column(Integer, index=True)
+    method = Column(String(10), index=True)
     url = Column(String(50), index=True)
     user = Column(String(100))  # User Identity (RFC931)
     hierarchy_code = Column(String(50))
