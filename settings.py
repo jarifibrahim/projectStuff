@@ -15,6 +15,7 @@ Session = orm.scoped_session(Session_Factory)
 session = Session()
 Base = declarative_base()
 
+RESULT_SIGNAL_SIZE = 50
 APACHE_COMMON = 0
 # Used while printing output
 APACHE_COMMON_OUTPUT_FORMAT = ("{0: ^5}\t{1: ^15}\t{2: ^30}\t{3: ^30}"
@@ -26,7 +27,7 @@ APACHE_COMMON_HEADING = APACHE_COMMON_OUTPUT_FORMAT.format(
     "Time zone", "Method", "Status Code", "Size of Object", "Protocol",
     "Resource Requested")
 APACHE_COMMON_LOG_RE = r'^([0-9\.]+)\s((?:\w+|-))\s([\w\d_-]*)\s\[([\d\/\w:]*'\
-    r')\s((?:\-|\+)\d+)\]\s\"(\w+)\s(\S+)\s([\w\d\/\.]*)\"\s(\d{3})\s(\d+)$'
+    r')\s((?:\-|\+)\d+)\]\s\"(\w+)\s(\S+)\s([\w\d\/\.]*)\"\s(\d{3})\s((?:\d+|-))$'
 
 apache_ignore_criteria = {
     # Entries with status code other than 200 will be ignored
@@ -42,9 +43,9 @@ APACHE_COMBINED = 1
 
 APACHE_COMBINED_OUTPUT_FORMAT = APACHE_COMMON_OUTPUT_FORMAT
 APACHE_COMBINED_HEADING = APACHE_COMMON_HEADING
-APACHE_COMBINED_LOG_RE = r'^([0-9\.]+)\s((?:\w+|-))\s([\w\d_-]*)\s\[([\d\/'\
-    r'\w:]*)\s((?:\-|\+)\d+)\]\s\"(\w+)\s(\S+)\s([\w\d\/\.]*)\"\s(\d{3})\s'\
-    r'(\d+) (\".*\") (\".*\")$'
+APACHE_COMBINED_LOG_RE = r'^([0-9\.]+)\s((?:\w+|-))\s([\w\d_\-\"\"]*)\s\[([\d\/'\
+    r'\w:]*)\s((?:\-|\+)\d+)\]\s\"(\w+)\s(\S+)?\s([\w\d\/\.]*)\"\s(\d{3})\s'\
+    r'((?:\d+|-)) (\".*\") (\".*\")$'
 
 apache_ignore_criteria = {
     # Entries with status code other than 200 will be ignored

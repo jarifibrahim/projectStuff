@@ -2,7 +2,8 @@
 
 import re
 from datetime import datetime, timedelta
-from models import Token_common, Token_squid, Token_combined, Uurl, Session, get_or_create
+from models import Token_common, Token_squid, Token_combined, Uurl, \
+    Session, get_or_create
 import settings
 from sqlalchemy import or_
 from PyQt4 import QtCore
@@ -55,8 +56,8 @@ class LogFile(object):
 
 class TokenizationThread(LogFile, QtCore.QThread):
     """docstring for TokenizationThread"""
-    line_count_signal = QtCore.pyqtSignal(int)
-    update_progress_signal = QtCore.pyqtSignal(list)
+    total_count_signal = QtCore.pyqtSignal(int)
+    update_progress_signal = QtCore.pyqtSignal(int, list)
 
     def __init__(self, file_path, f_type):
         super(TokenizationThread, self).__init__(file_path)
@@ -65,6 +66,7 @@ class TokenizationThread(LogFile, QtCore.QThread):
             logging.error("Incorrect file type. Detected type: %d, selected "
                           "type: %d" % (self.file_type, f_type))
             raise TypeError
+        self.result_array = []
 
     def _count_lines(self):
         count = sum(1 for _ in self.file)
@@ -77,12 +79,13 @@ class TokenizationThread(LogFile, QtCore.QThread):
         Break the log file into tokens and insert them into the database
         """
         # Send number of lines to the GUI
-        self.line_count_signal.emit(self.number_of_lines)
+        self.total_count_signal.emit(self.number_of_lines)
         logging.info("Total number of lines in file %d" % self.number_of_lines)
         if self.file_type == settings.APACHE_COMMON:
             token_array = []
+            # Arg 2 should be list
             self.update_progress_signal.emit(
-                [-1, settings.APACHE_COMMON_HEADING])
+                -1, [settings.APACHE_COMMON_HEADING])
             for i, line in enumerate(self.file):
                 item = line.split(" ")
                 # Remove '[' from date
@@ -128,56 +131,21 @@ class TokenizationThread(LogFile, QtCore.QThread):
 
         elif self.file_type == settings.APACHE_COMBINED:
             token_array = []
+            regex = re.compile(settings.APACHE_COMBINED_LOG_RE)
             self.update_progress_signal.emit(
-                [-1, settings.APACHE_COMBINED_HEADING])
+                -1, [settings.APACHE_COMBINED_HEADING])
             for i, line in enumerate(self.file):
-                item = line.split(" ")
-                # Remove '[' from date
-                datetime_string = item[3].replace('[', '')
-                # Remove ']' from timezone
-                timezone_string = item[4].replace(']', '')
-
-                # Remove '"' from request method
-                method_string = item[5].replace('"', '')
-
-                # Remove DUST
-                resource_requested = item[6].split('?')[0]
-
-                # Requested URL extension
-                request_ext = item[6].split(".")[-1]
-
-                # Remove '"' from protocol
-                protocol_string = item[7].replace('"', '')
-
-                date_time = datetime.strptime(
-                    datetime_string, settings.DATETIME_FORMAT)
-
-                # Try to convert bytes transferred to int
-                try:
-                    bytes_transferred = int(item[9])
-                except ValueError:
-                    bytes_transferred = 0
-
-                try:
-                    status_code = int(item[8])
-                except ValueError:
-                    status_code = 0
-                token_object = Token_combined(
-                    ip_address=item[0], user_identifier=item[1],
-                    user_id=item[2], date_time=date_time,
-                    time_zone=timezone_string, method=method_string,
-                    resource_requested=resource_requested,
-                    request_ext=request_ext, protocol=protocol_string,
-                    status_code=status_code,
-                    size_of_object=bytes_transferred, referrer=item[11], user_agent=item[12])
+                item = regex.match(line)
+                token_object = Token_combined(item.groups())
                 token_array.append(token_object)
                 self.send_result_signal(i, token_object)
 
         elif self.file_type == settings.SQUID:
             token_array = []
-            self.update_progress_signal.emit([-1, settings.SQUID_HEADING])
+            regex = re.compile(settings.SQUID_LOG_RE)
+            self.update_progress_signal.emit(-1, [settings.SQUID_HEADING])
             for i, line in enumerate(self.file):
-                item = re.match(settings.SQUID_LOG_RE, line)
+                item = regex.match(line)
 
                 # The timestamp string contains milliseconds which cannot be
                 # directly removed. So the string is converted to float and
@@ -198,18 +166,20 @@ class TokenizationThread(LogFile, QtCore.QThread):
                 )
                 token_array.append(token_object)
                 self.send_result_signal(i, token_object)
+
+        self.update_progress_signal.emit(
+            self.number_of_lines - 1, self.result_array)
         self.session.bulk_save_objects(token_array)
         self.session.commit()
         logging.info("All tokens inserted into database")
         settings.Session.remove()
 
-    def send_result_signal(self, i, token_obj):
+    def send_result_signal(self, i, token_obj=None):
         """
         Send current status of the tokenization to the GUI.
         :param i: Current tokenization count
         :param token_obj: Token_common object
         """
-
         if self.file_type == settings.APACHE_COMMON:
             text = [i + 1, token_obj.ip_address, token_obj.user_identifier,
                     token_obj.user_id, str(token_obj.date_time),
@@ -217,7 +187,7 @@ class TokenizationThread(LogFile, QtCore.QThread):
                     token_obj.status_code, token_obj.size_of_object,
                     token_obj.protocol, token_obj.resource_requested]
 
-            msg = [i, settings.APACHE_COMMON_OUTPUT_FORMAT.format(*text)]
+            msg = settings.APACHE_COMMON_OUTPUT_FORMAT.format(*text)
 
         elif self.file_type == settings.APACHE_COMBINED:
             text = [i + 1, token_obj.ip_address, token_obj.user_identifier,
@@ -226,8 +196,7 @@ class TokenizationThread(LogFile, QtCore.QThread):
                     token_obj.status_code, token_obj.size_of_object,
                     token_obj.protocol, token_obj.resource_requested,
                     token_obj.referrer, token_obj.user_agent]
-
-            msg = [i, settings.APACHE_COMBINED_OUTPUT_FORMAT.format(*text)]
+            msg = settings.APACHE_COMBINED_OUTPUT_FORMAT.format(*text)
 
         elif self.file_type == settings.SQUID:
             text = [i + 1, str(token_obj.date_time), token_obj.duration,
@@ -237,17 +206,19 @@ class TokenizationThread(LogFile, QtCore.QThread):
                     token_obj.type_content, token_obj.method, token_obj.url]
 
             # *text is used to expand list in place
-            msg = [i, settings.SQUID_OUTPUT_FORMAT.format(*text)]
-        # Send status to GUI
-        self.update_progress_signal.emit(msg)
+            msg = settings.SQUID_OUTPUT_FORMAT.format(*text)
+        self.result_array.append(msg)
+
+        if len(self.result_array) is settings.RESULT_SIGNAL_SIZE:
+            self.update_progress_signal.emit(i, self.result_array)
+            self.result_array = []
 
 
 class FilteringThread(LogFile, QtCore.QThread):
     """ Filters data in the database according to ignore criteria"""
 
-    line_count_signal = QtCore.pyqtSignal(int)
-    result_item_signal = QtCore.pyqtSignal(list)
-    update_progress_signal = QtCore.pyqtSignal(list)
+    total_count_signal = QtCore.pyqtSignal(int)
+    update_progress_signal = QtCore.pyqtSignal(int, list)
 
     def __init__(self, file_path, ignore_list):
         super(FilteringThread, self).__init__(file_path)
@@ -313,11 +284,11 @@ class FilteringThread(LogFile, QtCore.QThread):
         """
         if self.file_type == settings.APACHE_COMMON:
             self.update_progress_signal.emit(
-                [-1, settings.APACHE_COMMON_HEADING])
+                -1, [settings.APACHE_COMMON_HEADING])
             # Send result to GUI
-            self.line_count_signal.emit(
-                self.session.query(Token_common).count())
-
+            total_items = self.session.query(Token_common).count()
+            self.total_count_signal.emit(total_items)
+            result_list = []
             for i, token_obj in enumerate(self.session.query(
                     Token_common).all()):
                 text = [i + 1, token_obj.ip_address,
@@ -327,16 +298,20 @@ class FilteringThread(LogFile, QtCore.QThread):
                         token_obj.size_of_object, token_obj.protocol,
                         token_obj.resource_requested]
                 # *text is used to expand list in place
-                msg = [i, settings.APACHE_COMMON_OUTPUT_FORMAT.format(*text)]
-                self.result_item_signal.emit(msg)
+                result_list.append(
+                    settings.APACHE_COMMON_OUTPUT_FORMAT.format(*text))
+                if len(result_list) is settings.RESULT_SIGNAL_SIZE:
+                    self.update_progress_signal.emit(i, result_list)
+                    result_list = []
+            self.update_progress_signal.emit(total_items - 1, result_list)
 
         elif self.file_type == settings.APACHE_COMBINED:
             self.update_progress_signal.emit(
-                [-1, settings.APACHE_COMBINED_HEADING])
+                -1, [settings.APACHE_COMBINED_HEADING])
             # Send result to GUI
-            self.line_count_signal.emit(
-                self.session.query(Token_combined).count())
-
+            total_items = self.session.query(Token_combined).count()
+            self.total_count_signal.emit(total_items)
+            result_list = []
             for i, token_obj in enumerate(self.session.query(
                     Token_combined).all()):
                 text = [i + 1, token_obj.ip_address,
@@ -347,15 +322,19 @@ class FilteringThread(LogFile, QtCore.QThread):
                         token_obj.resource_requested, token_obj.referrer,
                         token_obj.user_agent]
                 # *text is used to expand list in place
-                msg = [i, settings.APACHE_COMBINED_OUTPUT_FORMAT.format(*text)]
-                self.result_item_signal.emit(msg)
+                result_list.append(
+                    settings.APACHE_COMBINED_OUTPUT_FORMAT.format(*text))
+                if len(result_list) is settings.RESULT_SIGNAL_SIZE:
+                    self.update_progress_signal.emit(i, result_list)
+                    result_list = []
+            self.update_progress_signal.emit(total_items - 1, result_list)
 
         elif self.file_type == settings.SQUID:
             self.update_progress_signal.emit(
-                [-1, settings.SQUID_HEADING])
-            self.line_count_signal.emit(
-                self.session.query(Token_squid).count())
-
+                -1, [settings.SQUID_HEADING])
+            total_items = self.session.query(Token_squid).count()
+            self.total_count_signal.emit(total_items)
+            result_list = []
             for i, token_obj in enumerate(self.session.query(
                     Token_squid).all()):
                 text = [i + 1, str(token_obj.date_time), token_obj.duration,
@@ -364,15 +343,19 @@ class FilteringThread(LogFile, QtCore.QThread):
                         token_obj.hierarchy_code, token_obj.type_content,
                         token_obj.method, token_obj.url]
                 # *text is used to expand list in place
-                msg = [i, settings.SQUID_OUTPUT_FORMAT.format(*text)]
-                self.result_item_signal.emit(msg)
+                result_list.append(
+                    settings.SQUID_OUTPUT_FORMAT.format(*text))
+                if len(result_list) is settings.RESULT_SIGNAL_SIZE:
+                    self.update_progress_signal.emit(i, result_list)
+                    result_list = []
+            self.update_progress_signal.emit(total_items - 1, result_list)
 
 
 class SessionThread(LogFile, QtCore.QThread):
     """ The thread that performs sessionization of the data in the database """
+
     total_count_signal = QtCore.pyqtSignal(int)
-    update_progress_signal = QtCore.pyqtSignal(list)
-    result_signal = QtCore.pyqtSignal(str)
+    update_progress_signal = QtCore.pyqtSignal(int, list)
     # To be sent after each step is completed
     step_completed_signal = QtCore.pyqtSignal(int)
     number_of_sessions_signal = QtCore.pyqtSignal(int)
@@ -427,7 +410,7 @@ class SessionThread(LogFile, QtCore.QThread):
                     total_session_time = s_time + total_session_time
                     self.insert_item(e, False, total_session_time)
                 last_entry_time = e.date_time
-            self.update_progress_signal.emit([i, None])
+            self.update_progress_signal.emit(i, [])
             # Generating sessions completed
             self.step_completed_signal.emit(1)
         logging.info("All sessions created. Sending result to the GUI")
@@ -506,7 +489,7 @@ class SessionThread(LogFile, QtCore.QThread):
 
         url_query = self.session.query(Uurl).all()
         for q in url_query:
-            self.update_progress_signal.emit([q.id, str(q)])
+            self.update_progress_signal.emit(q.id, [str(q)])
         logging.info("All urls sent to the GUI")
         # Printing urls completed
         self.step_completed_signal.emit(2)
@@ -516,16 +499,16 @@ class SessionThread(LogFile, QtCore.QThread):
         last_id = self.session.query(Uurl.id).order_by(
             Uurl.id.desc()).first()[0]
 
-        self.update_progress_signal.emit([last_id, "\n"])
-        self.update_progress_signal.emit([last_id, "\n"])
+        self.update_progress_signal.emit(last_id, ["\n"])
+        self.update_progress_signal.emit(last_id, ["\n"])
 
         msg = settings.SESSION_OUTPUT_HEADING
-        self.update_progress_signal.emit([last_id, msg])
+        self.update_progress_signal.emit(last_id, [msg])
 
         # Send all sessions back to GUI
         session_query = self.session.query(Session).all()
         for s in session_query:
-            self.update_progress_signal.emit([last_id + s.id - 1, str(s)])
+            self.update_progress_signal.emit(last_id + s.id - 1, [str(s)])
         logging.info("All sessions sent to the GUI")
         # Printing sessions completed
         self.step_completed_signal.emit(3)

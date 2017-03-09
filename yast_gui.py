@@ -119,7 +119,7 @@ class YastGui(QtGui.QMainWindow):
             return
 
         self.thread.update_progress_signal.connect(self.update_progress)
-        self.thread.line_count_signal.connect(self.set_total_count)
+        self.thread.total_count_signal.connect(self.set_total_count)
         self.thread.finished.connect(self.tokenization_completed)
         self.thread.started.connect(self.tokenization_started)
         self.thread.start()
@@ -160,16 +160,20 @@ class YastGui(QtGui.QMainWindow):
         self.old_total_records = self.total_records
         self.total_records = count
 
-    def update_progress(self, status_list):
-        """ Update progress bar and current status in the GUI """
-        # Calculate completion percentage
-        current_count = status_list[0]
+    def update_progress(self, progress_val, output_list):
+        """
+        Update progress bar and current status in the GUI
+        :param progress_val: Progress bar will be set to this value
+        :param output_list: List of str that will be printed to output textEdit
+        """
+        current_count = progress_val
         self.ui.progressBar.setValue(current_count + 1)
         msg = self.ui.records_processed_value_label.text().split('/')
         msg[0] = str(current_count + 1)
         self.ui.records_processed_value_label.setText("/".join(msg))
-        if status_list[1] is not None:
-            self.ui.output_textEdit.append(status_list[1])
+        if output_list:
+            for item in output_list:
+                self.ui.output_textEdit.append(item)
 
     def init_database(self):
         """ Create all tables """
@@ -190,9 +194,7 @@ class YastGui(QtGui.QMainWindow):
         self.filter_thread = FilteringThread(self.file_path, ignore_list)
         logging.info("Filter thread created")
         self.filter_thread.started.connect(self.filter_started)
-        self.filter_thread.line_count_signal.connect(self.set_total_count)
-        self.filter_thread.result_item_signal.connect(
-            self.update_progress)
+        self.filter_thread.total_count_signal.connect(self.set_total_count)
         self.filter_thread.update_progress_signal.connect(self.update_progress)
         self.filter_thread.finished.connect(self.filter_completed)
         self.filter_thread.start()

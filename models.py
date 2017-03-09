@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, \
     Table, Interval
 from sqlalchemy.orm import relationship
+import datetime
 import settings
 
 
@@ -43,6 +44,25 @@ class Token_common(settings.Base):
 
 class Token_combined(settings.Base):
     __tablename__ = 'Token_combined'
+
+    def __init__(self, values):
+        super(Token_combined, self).__init__()
+        self.ip_address = values[0]
+        self.user_identifier = values[1]
+        self.user_id = values[2]
+        self.date_time = datetime.datetime.strptime(
+            values[3], settings.DATETIME_FORMAT)
+        self.time_zone = values[4]
+        self.method = values[5]
+        self.resource_requested = values[6].split("?")[0] if values[
+            6] else ""
+        self.request_ext = self.resource_requested.split(
+            ".")[-1] if values[6] else ""
+        self.protocol = values[7]
+        self.status_code = values[8]
+        self.size_of_object = values[9]
+        self.referrer = values[10]
+        self.user_agent = values[11]
 
     token_id = Column(Integer, primary_key=True)
     ip_address = Column(String(50), index=True)
