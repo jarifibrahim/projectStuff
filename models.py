@@ -18,8 +18,25 @@ def get_or_create(session, model, **kwargs):
         return instance
 
 
-class Token_common(settings.Base):
+class TokenCommon(settings.Base):
     __tablename__ = 'Token_common'
+
+    def __init__(self, values):
+        super(TokenCommon, self).__init__()
+        self.ip_address = values[0]
+        self.user_identifier = values[1]
+        self.user_id = values[2]
+        self.date_time = datetime.datetime.strptime(
+            values[3], settings.DATETIME_FORMAT)
+        self.time_zone = values[4]
+        self.method = values[5]
+        self.resource_requested = values[6].split("?")[0] if values[
+            6] else ""
+        self.request_ext = self.resource_requested.split(
+            ".")[-1] if values[6] else ""
+        self.protocol = values[7]
+        self.status_code = values[8]
+        self.size_of_object = values[9]
 
     token_id = Column(Integer, primary_key=True)
     ip_address = Column(String(50), index=True)
@@ -42,11 +59,11 @@ class Token_common(settings.Base):
             self.resource_requested)
 
 
-class Token_combined(settings.Base):
+class TokenCombined(settings.Base):
     __tablename__ = 'Token_combined'
 
     def __init__(self, values):
-        super(Token_combined, self).__init__()
+        super(TokenCombined, self).__init__()
         self.ip_address = values[0]
         self.user_identifier = values[1]
         self.user_id = values[2]
@@ -70,8 +87,8 @@ class Token_combined(settings.Base):
     user_id = Column(String(50))
     date_time = Column(DateTime)
     time_zone = Column(String(50))
-    method = Column(String(50))
-    resource_requested = Column(String(300), index=True)
+    method = Column(String(10), index=True)
+    resource_requested = Column(String(100), index=True)
     request_ext = Column(String(50), index=True)
     protocol = Column(String(50))
     status_code = Column(Integer, index=True)
@@ -80,7 +97,7 @@ class Token_combined(settings.Base):
     user_agent = Column(String(200))
 
 
-class Token_squid(settings.Base):
+class TokenSquid(settings.Base):
     __tablename__ = 'Token_squid'
 
     token_id = Column(Integer, primary_key=True)

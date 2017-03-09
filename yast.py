@@ -2,7 +2,7 @@
 
 import re
 from datetime import datetime, timedelta
-from models import Token_common, Token_squid, Token_combined, Uurl, \
+from models import TokenCommon, TokenCombined, TokenSquid, Uurl, \
     Session, get_or_create
 import settings
 from sqlalchemy import or_
@@ -118,7 +118,7 @@ class TokenizationThread(LogFile, QtCore.QThread):
                     status_code = int(item[8])
                 except ValueError:
                     status_code = 0
-                token_object = Token_common(
+                token_object = TokenCommon(
                     ip_address=item[0], user_identifier=item[1],
                     user_id=item[2], date_time=date_time,
                     time_zone=timezone_string, method=method_string,
@@ -136,7 +136,7 @@ class TokenizationThread(LogFile, QtCore.QThread):
                 -1, [settings.APACHE_COMBINED_HEADING])
             for i, line in enumerate(self.file):
                 item = regex.match(line)
-                token_object = Token_combined(item.groups())
+                token_object = TokenCombined(item.groups())
                 token_array.append(token_object)
                 self.send_result_signal(i, token_object)
 
@@ -156,7 +156,7 @@ class TokenizationThread(LogFile, QtCore.QThread):
                 bytes_delivered = int(item.group(5))
                 request_url = item.group(7).split("?")[0]
                 request_ext = request_url.split(".")[-1]
-                token_object = Token_squid(
+                token_object = TokenSquid(
                     date_time=date_time, duration=duration,
                     ip_address=item.group(3), status_code=status_code,
                     bytes_delivered=bytes_delivered, method=item.group(6),
@@ -178,7 +178,7 @@ class TokenizationThread(LogFile, QtCore.QThread):
         """
         Send current status of the tokenization to the GUI.
         :param i: Current tokenization count
-        :param token_obj: Token_common object
+        :param token_obj: TokenCommon object
         """
         if self.file_type == settings.APACHE_COMMON:
             text = [i + 1, token_obj.ip_address, token_obj.user_identifier,
@@ -239,11 +239,11 @@ class FilteringThread(LogFile, QtCore.QThread):
             method = settings.apache_ignore_criteria['method']
             min_size = settings.apache_ignore_criteria['size_of_object']
 
-            self.session.query(Token_common).filter(
-                or_(Token_common.status_code != status_code,
-                    ~Token_common.method.in_(method),
-                    Token_common.request_ext.in_(ignore_list),
-                    Token_common.size_of_object <= min_size)).delete(
+            self.session.query(TokenCommon).filter(
+                or_(TokenCommon.status_code != status_code,
+                    ~TokenCommon.method.in_(method),
+                    TokenCommon.request_ext.in_(ignore_list),
+                    TokenCommon.size_of_object <= min_size)).delete(
                 synchronize_session='fetch')
 
         elif self.file_type == settings.APACHE_COMBINED:
@@ -253,11 +253,11 @@ class FilteringThread(LogFile, QtCore.QThread):
             method = settings.apache_ignore_criteria['method']
             min_size = settings.apache_ignore_criteria['size_of_object']
 
-            self.session.query(Token_combined).filter(
-                or_(Token_combined.status_code != status_code,
-                    ~Token_combined.method.in_(method),
-                    Token_combined.request_ext.in_(ignore_list),
-                    Token_combined.size_of_object <= min_size)).delete(
+            self.session.query(TokenCombined).filter(
+                or_(TokenCombined.status_code != status_code,
+                    ~TokenCombined.method.in_(method),
+                    TokenCombined.request_ext.in_(ignore_list),
+                    TokenCombined.size_of_object <= min_size)).delete(
                 synchronize_session='fetch')
 
         elif self.file_type == settings.SQUID:
@@ -267,11 +267,11 @@ class FilteringThread(LogFile, QtCore.QThread):
             method = settings.squid_ignore_criteria['method']
             min_size = settings.squid_ignore_criteria['size_of_object']
 
-            self.session.query(Token_squid).filter(
-                or_(Token_squid.status_code != status_code,
-                    ~Token_squid.method.in_(method),
-                    Token_squid.request_ext.in_(ignore_list),
-                    Token_squid.bytes_delivered <= min_size)).delete(
+            self.session.query(TokenSquid).filter(
+                or_(TokenSquid.status_code != status_code,
+                    ~TokenSquid.method.in_(method),
+                    TokenSquid.request_ext.in_(ignore_list),
+                    TokenSquid.bytes_delivered <= min_size)).delete(
                 synchronize_session='fetch')
 
         self.session.commit()
@@ -286,11 +286,11 @@ class FilteringThread(LogFile, QtCore.QThread):
             self.update_progress_signal.emit(
                 -1, [settings.APACHE_COMMON_HEADING])
             # Send result to GUI
-            total_items = self.session.query(Token_common).count()
+            total_items = self.session.query(TokenCommon).count()
             self.total_count_signal.emit(total_items)
             result_list = []
             for i, token_obj in enumerate(self.session.query(
-                    Token_common).all()):
+                    TokenCommon).all()):
                 text = [i + 1, token_obj.ip_address,
                         token_obj.user_identifier, token_obj.user_id,
                         str(token_obj.date_time), token_obj.time_zone,
@@ -309,11 +309,11 @@ class FilteringThread(LogFile, QtCore.QThread):
             self.update_progress_signal.emit(
                 -1, [settings.APACHE_COMBINED_HEADING])
             # Send result to GUI
-            total_items = self.session.query(Token_combined).count()
+            total_items = self.session.query(TokenCombined).count()
             self.total_count_signal.emit(total_items)
             result_list = []
             for i, token_obj in enumerate(self.session.query(
-                    Token_combined).all()):
+                    TokenCombined).all()):
                 text = [i + 1, token_obj.ip_address,
                         token_obj.user_identifier, token_obj.user_id,
                         str(token_obj.date_time), token_obj.time_zone,
@@ -332,11 +332,11 @@ class FilteringThread(LogFile, QtCore.QThread):
         elif self.file_type == settings.SQUID:
             self.update_progress_signal.emit(
                 -1, [settings.SQUID_HEADING])
-            total_items = self.session.query(Token_squid).count()
+            total_items = self.session.query(TokenSquid).count()
             self.total_count_signal.emit(total_items)
             result_list = []
             for i, token_obj in enumerate(self.session.query(
-                    Token_squid).all()):
+                    TokenSquid).all()):
                 text = [i + 1, str(token_obj.date_time), token_obj.duration,
                         token_obj.ip_address, token_obj.status_code,
                         token_obj.bytes_delivered, token_obj.user,
@@ -370,11 +370,11 @@ class SessionThread(LogFile, QtCore.QThread):
         Token_type = None
 
         if self.file_type == settings.APACHE_COMMON:
-            Token_type = Token_common
+            Token_type = TokenCommon
         elif self.file_type == settings.SQUID:
-            Token_type = Token_squid
+            Token_type = TokenSquid
         elif self.file_type == settings.APACHE_COMBINED:
-            Token_type = Token_combined
+            Token_type = TokenCombined
         # Get all distinct ip addresses
         all_entries = self.session.query(Token_type.ip_address).order_by(
             'ip_address').distinct().all()
