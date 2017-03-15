@@ -100,6 +100,23 @@ class TokenCombined(settings.Base):
 class TokenSquid(settings.Base):
     __tablename__ = 'Token_squid'
 
+    def __init__(self, values):
+        super(TokenSquid, self).__init__()
+        # The timestamp string contains milliseconds which cannot be
+        # directly removed. So the string is converted to float and
+        # then to an int
+        self.date_time = datetime.datetime.fromtimestamp(int(float(values[0])))
+        self.duration = int(values[1])
+        self.ip_address = values[2]
+        self.status_code = int(values[3].split("/")[-1])
+        self.bytes_delivered = int(values[4])
+        self.method = values[5]
+        self.url = values[6].split("?")[0]
+        self.user = values[7]
+        self.hierarchy_code = values[8]
+        self.type_content = values[9]
+        self.request_ext = self.url.split(".")[-1]
+
     token_id = Column(Integer, primary_key=True)
     date_time = Column(DateTime)
     duration = Column(Integer)

@@ -1,7 +1,7 @@
 # /usr/bin/python3
 
 import re
-from datetime import datetime, timedelta
+from datetime import timedelta
 from models import TokenCommon, TokenCombined, TokenSquid, Uurl, \
     Session, get_or_create
 import settings
@@ -83,49 +83,17 @@ class TokenizationThread(LogFile, QtCore.QThread):
         logging.info("Total number of lines in file %d" % self.number_of_lines)
         if self.file_type == settings.APACHE_COMMON:
             token_array = []
+            regex = re.compile(settings.APACHE_COMMON_LOG_RE)
             # Arg 2 should be list
             self.update_progress_signal.emit(
                 -1, [settings.APACHE_COMMON_HEADING])
             for i, line in enumerate(self.file):
-                item = line.split(" ")
-                # Remove '[' from date
-                datetime_string = item[3].replace('[', '')
-                # Remove ']' from timezone
-                timezone_string = item[4].replace(']', '')
-
-                # Remove '"' from request method
-                method_string = item[5].replace('"', '')
-
-                # Remove DUST
-                resource_requested = item[6].split('?')[0]
-
-                # Requested URL extension
-                request_ext = item[6].split(".")[-1]
-
-                # Remove '"' from protocol
-                protocol_string = item[7].replace('"', '')
-
-                date_time = datetime.strptime(
-                    datetime_string, settings.DATETIME_FORMAT)
-
-                # Try to convert bytes transferred to int
-                try:
-                    bytes_transferred = int(item[9])
-                except ValueError:
-                    bytes_transferred = 0
-
-                try:
-                    status_code = int(item[8])
-                except ValueError:
-                    status_code = 0
-                token_object = TokenCommon(
-                    ip_address=item[0], user_identifier=item[1],
-                    user_id=item[2], date_time=date_time,
-                    time_zone=timezone_string, method=method_string,
-                    resource_requested=resource_requested,
-                    request_ext=request_ext, protocol=protocol_string,
-                    status_code=status_code,
-                    size_of_object=bytes_transferred)
+                item = regex.match(line)
+                if not item:
+                    logging.error(
+                        "Couldn't tokenize the following line\n" + line)
+                    continue
+                token_object = TokenCommon(item.groups())
                 token_array.append(token_object)
                 self.send_result_signal(i, token_object)
 
@@ -136,6 +104,10 @@ class TokenizationThread(LogFile, QtCore.QThread):
                 -1, [settings.APACHE_COMBINED_HEADING])
             for i, line in enumerate(self.file):
                 item = regex.match(line)
+                if not item:
+                    logging.error(
+                        "Couldn't tokenize the following line\n" + line)
+                    continue
                 token_object = TokenCombined(item.groups())
                 token_array.append(token_object)
                 self.send_result_signal(i, token_object)
@@ -146,24 +118,11 @@ class TokenizationThread(LogFile, QtCore.QThread):
             self.update_progress_signal.emit(-1, [settings.SQUID_HEADING])
             for i, line in enumerate(self.file):
                 item = regex.match(line)
-
-                # The timestamp string contains milliseconds which cannot be
-                # directly removed. So the string is converted to float and
-                # then to an int
-                date_time = datetime.fromtimestamp(int(float(item.group(1))))
-                duration = int(item.group(2))
-                status_code = item.group(4).split("/")[-1]
-                bytes_delivered = int(item.group(5))
-                request_url = item.group(7).split("?")[0]
-                request_ext = request_url.split(".")[-1]
-                token_object = TokenSquid(
-                    date_time=date_time, duration=duration,
-                    ip_address=item.group(3), status_code=status_code,
-                    bytes_delivered=bytes_delivered, method=item.group(6),
-                    url=request_url, user=item.group(8),
-                    hierarchy_code=item.group(9),
-                    type_content=item.group(10), request_ext=request_ext
-                )
+                if not item:
+                    logging.error(
+                        "Couldn't tokenize the following line\n" + line)
+                    continue
+                token_object = TokenSquid(item.groups())
                 token_array.append(token_object)
                 self.send_result_signal(i, token_object)
 

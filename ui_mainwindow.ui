@@ -740,6 +740,12 @@
         <height>31</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
      </widget>
      <widget class="QLabel" name="ignore_ext_label">
       <property name="geometry">
