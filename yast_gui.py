@@ -160,20 +160,19 @@ class YastGui(QtGui.QMainWindow):
         self.old_total_records = self.total_records
         self.total_records = count
 
-    def update_progress(self, progress_val, output_list):
+    def update_progress(self, progress_val, output_str):
         """
         Update progress bar and current status in the GUI
         :param progress_val: Progress bar will be set to this value
-        :param output_list: List of str that will be printed to output textEdit
+        :param output_str: str that will be appended to output textEdit
         """
         current_count = progress_val
         self.ui.progressBar.setValue(current_count + 1)
         msg = self.ui.records_processed_value_label.text().split('/')
         msg[0] = str(current_count + 1)
         self.ui.records_processed_value_label.setText("/".join(msg))
-        if output_list:
-            for item in output_list:
-                self.ui.output_plainTextEdit.appendPlainText(item)
+        if output_str:
+            self.ui.output_plainTextEdit.insertPlainText(output_str)
 
     def init_database(self):
         """ Create all tables """
@@ -260,7 +259,7 @@ class YastGui(QtGui.QMainWindow):
         self.ui.B_Close.setEnabled(False)
         msg = "Sessionization in progress. Please wait..."
         self.ui.status_lineEdit.setText(msg)
-        self.ui.output_plainTextEdit.setPlainText(settings.URL_OUTPUT_HEADING)
+        self.ui.output_plainTextEdit.setPlainText("")
 
     def sessionization_completed(self):
         """ Signal handler for FINISHED signal of SessionizationThread """
