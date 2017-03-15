@@ -16,7 +16,7 @@ class YastGui(QtGui.QMainWindow):
 
         # Disable frames
         self.ui.token_frame.setEnabled(False)
-        self.ui.clean_frame.setEnabled(False)
+        self.ui.filter_frame.setEnabled(False)
         self.ui.session_frame.setEnabled(False)
 
         # Set on click event for all buttons
@@ -50,7 +50,7 @@ class YastGui(QtGui.QMainWindow):
         self.ui.file_path_textEdit.setText(fname)
         self.ui.status_lineEdit.setText("Please start Tokenization.")
         self.ui.token_frame.setEnabled(True)
-        self.ui.clean_frame.setEnabled(False)
+        self.ui.filter_frame.setEnabled(False)
         self.ui.session_frame.setEnabled(False)
 
     def close_application(self):
@@ -139,7 +139,7 @@ class YastGui(QtGui.QMainWindow):
     def tokenization_completed(self):
         """ Signal handler for FINISHED signal of TokenizationThread """
         logging.info("Tokenization thread completed")
-        self.ui.clean_frame.setEnabled(True)
+        self.ui.filter_frame.setEnabled(True)
         self.ui.session_frame.setEnabled(True)
 
         self.ui.B_Save.setEnabled(True)
@@ -203,7 +203,7 @@ class YastGui(QtGui.QMainWindow):
         """ Signal handler for STARTED signal of FilteringThread """
         logging.info("Filter thread started")
         self.ui.token_frame.setEnabled(False)
-        self.ui.clean_frame.setEnabled(False)
+        self.ui.filter_frame.setEnabled(False)
         self.ui.session_frame.setEnabled(False)
 
         self.ui.B_Save.setEnabled(False)
@@ -217,7 +217,7 @@ class YastGui(QtGui.QMainWindow):
         """ Signal handler for FINISHED signal of FilteringThread """
         logging.info("Filter thread completed")
         self.ui.token_frame.setEnabled(True)
-        self.ui.clean_frame.setEnabled(True)
+        self.ui.filter_frame.setEnabled(True)
         self.ui.session_frame.setEnabled(True)
 
         self.ui.B_Save.setEnabled(True)
@@ -253,7 +253,7 @@ class YastGui(QtGui.QMainWindow):
         """ Signal handler for STARTED signal of SessionizationThread """
         logging.info("Sessionization thread started")
         self.ui.token_frame.setEnabled(False)
-        self.ui.clean_frame.setEnabled(False)
+        self.ui.filter_frame.setEnabled(False)
         self.ui.session_frame.setEnabled(False)
 
         self.ui.B_Save.setEnabled(False)
@@ -266,7 +266,7 @@ class YastGui(QtGui.QMainWindow):
         """ Signal handler for FINISHED signal of SessionizationThread """
         logging.info("Sessionization completed")
         self.ui.token_frame.setEnabled(True)
-        self.ui.clean_frame.setEnabled(True)
+        self.ui.filter_frame.setEnabled(True)
         self.ui.session_frame.setEnabled(True)
 
         self.ui.B_Save.setEnabled(True)
