@@ -167,5 +167,4 @@ class Session(settings.Base):
     def __str__(self):
         url = [int(x.id) for x in self.session_urls]
         return settings.SESSION_OUTPUT_FORMAT.format(
-            self.id, str(self.session_time), str(self.start_time),
-            str(self.end_time), str(url))
+            self.id, self.ip, str(self.session_time), str(url))

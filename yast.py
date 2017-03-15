@@ -465,7 +465,7 @@ class SessionThread(LogFile, QtCore.QThread):
                 self.update_progress_signal.emit(
                     last_id + s.id - 1, result_string)
                 result_string = ""
-        self.update_progress_signal.emit(total_records, result_string)
+        self.update_progress_signal.emit(total_records - 1, result_string)
         logging.info("All sessions sent to the GUI")
         # Printing sessions completed
         self.step_completed_signal.emit(3)

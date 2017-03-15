@@ -19,9 +19,9 @@ RESULT_SIGNAL_SIZE = 1000
 
 APACHE_COMMON = 0
 # Used while printing output
-APACHE_COMMON_OUTPUT_FORMAT = ("{0: ^5}\t{1: ^15}\t{2: ^30}\t{3: ^30}"
-                               "\t{4: ^20}\t{5: ^20}\t{6: ^20}\t"
-                               "{7: ^20}\t{8: ^20}\t{9: ^20}\t{10:<}")
+APACHE_COMMON_OUTPUT_FORMAT = ("{0: >5}\t{1: <15}\t{2: <30}\t{3: <30}"
+                               "\t{4: <20}\t{5: <20}\t{6: <20}\t"
+                               "{7: <20}\t{8: <20}\t{9: <20}\t{10:<}")
 # Header for output
 APACHE_COMMON_HEADING = APACHE_COMMON_OUTPUT_FORMAT.format(
     "ID", "IP Address", "User Identifier", "User ID", "Date Time",
@@ -82,6 +82,6 @@ squid_ignore_criteria = {
 URL_OUTPUT_FORMAT = "{:>5}\t{:<}"
 URL_OUTPUT_HEADING = URL_OUTPUT_FORMAT.format("URL_ID", "URL")
 
-SESSION_OUTPUT_FORMAT = "{:>5}\t{: ^20}\t{: ^20}\t{: ^20}\t{:>}"
+SESSION_OUTPUT_FORMAT = "{:>5}\t{: <20}\t{: <20}\t{:>}"
 SESSION_OUTPUT_HEADING = SESSION_OUTPUT_FORMAT.format(
-    "ID", "Session Time", "Start Time", "End Time", "URL IDs")
+    "ID", "IP Address", "Session Time", "URL IDs")
