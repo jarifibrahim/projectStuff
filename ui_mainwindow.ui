@@ -156,7 +156,7 @@
     <property name="checkable">
      <bool>false</bool>
     </property>
-    <widget class="QTextEdit" name="output_textEdit">
+    <widget class="QPlainTextEdit" name="output_plainTextEdit">
      <property name="geometry">
       <rect>
        <x>12</x>
@@ -171,17 +171,20 @@
        <bold>false</bold>
       </font>
      </property>
-     <property name="mouseTracking">
-      <bool>false</bool>
-     </property>
-     <property name="toolTip">
-      <string/>
-     </property>
      <property name="lineWrapMode">
-      <enum>QTextEdit::NoWrap</enum>
+      <enum>QPlainTextEdit::NoWrap</enum>
      </property>
      <property name="readOnly">
       <bool>true</bool>
+     </property>
+     <property name="plainText">
+      <string/>
+     </property>
+     <property name="backgroundVisible">
+      <bool>false</bool>
+     </property>
+     <property name="centerOnScroll">
+      <bool>false</bool>
      </property>
     </widget>
    </widget>

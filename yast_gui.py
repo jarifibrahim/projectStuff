@@ -68,7 +68,7 @@ class YastGui(QtGui.QMainWindow):
             filter="Comma seperated Variable File (*.csv)")
         logging.info("Saving output to file %s" % name)
         file = open(name, 'w')
-        result = self.ui.output_textEdit.toPlainText()
+        result = self.ui.output_plainTextEdit.toPlainText()
         # Replace all tab characters by comma
         result = result.replace("\t", ",")
         # Remove all white spaces
@@ -134,7 +134,7 @@ class YastGui(QtGui.QMainWindow):
         self.ui.progressBar.setValue(0)
         self.ui.records_processed_value_label.setText("0/0")
         self.ui.records_processed_label.setText("Records processed")
-        self.ui.output_textEdit.setText("")
+        self.ui.output_plainTextEdit.setPlainText("")
 
     def tokenization_completed(self):
         """ Signal handler for FINISHED signal of TokenizationThread """
@@ -173,7 +173,7 @@ class YastGui(QtGui.QMainWindow):
         self.ui.records_processed_value_label.setText("/".join(msg))
         if output_list:
             for item in output_list:
-                self.ui.output_textEdit.append(item)
+                self.ui.output_plainTextEdit.appendPlainText(item)
 
     def init_database(self):
         """ Create all tables """
@@ -210,7 +210,7 @@ class YastGui(QtGui.QMainWindow):
         self.ui.B_Close.setEnabled(False)
         msg = "Log Filtering in progress. Please wait..."
         self.ui.status_lineEdit.setText(msg)
-        self.ui.output_textEdit.setText("")
+        self.ui.output_plainTextEdit.setPlainText("")
         self.ui.progressBar.setValue(0)
 
     def filter_completed(self):
@@ -260,7 +260,7 @@ class YastGui(QtGui.QMainWindow):
         self.ui.B_Close.setEnabled(False)
         msg = "Sessionization in progress. Please wait..."
         self.ui.status_lineEdit.setText(msg)
-        self.ui.output_textEdit.setText(settings.URL_OUTPUT_HEADING)
+        self.ui.output_plainTextEdit.setPlainText(settings.URL_OUTPUT_HEADING)
 
     def sessionization_completed(self):
         """ Signal handler for FINISHED signal of SessionizationThread """
