@@ -66,6 +66,8 @@ class YastGui(QtGui.QMainWindow):
         name = QtGui.QFileDialog.getSaveFileName(
             self.ui.centralwidget, 'YAST - Save File',
             filter="Comma seperated Variable File (*.csv)")
+        if not name:
+            return
         logging.info("Saving output to file %s" % name)
         file = open(name, 'w')
         result = self.ui.output_plainTextEdit.toPlainText()

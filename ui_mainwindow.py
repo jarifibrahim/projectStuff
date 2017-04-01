@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui_mainwindow.ui'
+# Form implementation generated from reading ui file 'G:\YAST\ui_mainwindow.ui'
 #
 # Created by: PyQt4 UI code generator 4.11.4
 #
@@ -311,9 +311,11 @@ class Ui_MainWindow(object):
         self.B_Close = QtGui.QPushButton(self.centralwidget)
         self.B_Close.setGeometry(QtCore.QRect(1180, 540, 90, 30))
         self.B_Close.setObjectName(_fromUtf8("B_Close"))
+        
         self.B_Save = QtGui.QPushButton(self.centralwidget)
         self.B_Save.setGeometry(QtCore.QRect(1080, 540, 93, 30))
         self.B_Save.setObjectName(_fromUtf8("B_Save"))
+        
         self.status_label = QtGui.QLabel(self.centralwidget)
         self.status_label.setGeometry(QtCore.QRect(230, 620, 51, 21))
         font = QtGui.QFont()
@@ -372,14 +374,6 @@ class Ui_MainWindow(object):
         self.line_8.setFrameShadow(QtGui.QFrame.Sunken)
         self.line_8.setObjectName(_fromUtf8("line_8"))
         MainWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1350, 25))
-        self.menubar.setObjectName(_fromUtf8("menubar"))
-        self.menuFile = QtGui.QMenu(self.menubar)
-        self.menuFile.setObjectName(_fromUtf8("menuFile"))
-        self.menuHelp = QtGui.QMenu(self.menubar)
-        self.menuHelp.setObjectName(_fromUtf8("menuHelp"))
-        MainWindow.setMenuBar(self.menubar)
         self.actionReset = QtGui.QAction(MainWindow)
         self.actionReset.setObjectName(_fromUtf8("actionReset"))
         self.actionOpen = QtGui.QAction(MainWindow)
@@ -393,14 +387,6 @@ class Ui_MainWindow(object):
         self.actionExit.setObjectName(_fromUtf8("actionExit"))
         self.actionYAST_Help = QtGui.QAction(MainWindow)
         self.actionYAST_Help.setObjectName(_fromUtf8("actionYAST_Help"))
-        self.menuFile.addAction(self.actionReset)
-        self.menuFile.addAction(self.actionOpen)
-        self.menuFile.addAction(self.actionSave)
-        self.menuFile.addAction(self.actionSave_As)
-        self.menuFile.addAction(self.actionExit)
-        self.menuHelp.addAction(self.actionYAST_Help)
-        self.menubar.addAction(self.menuFile.menuAction())
-        self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -429,12 +415,20 @@ class Ui_MainWindow(object):
         self.records_processed_value_label.setText(_translate("MainWindow", "0/0", None))
         self.records_processed_label.setText(_translate("MainWindow", "Records processed", None))
         self.label_6.setText(_translate("MainWindow", "YAST", None))
-        self.menuFile.setTitle(_translate("MainWindow", "File", None))
-        self.menuHelp.setTitle(_translate("MainWindow", "Help", None))
         self.actionReset.setText(_translate("MainWindow", "Reset", None))
         self.actionOpen.setText(_translate("MainWindow", "Open", None))
         self.actionSave.setText(_translate("MainWindow", "Save", None))
         self.actionSave_As.setText(_translate("MainWindow", "Save As...", None))
         self.actionExit.setText(_translate("MainWindow", "Exit", None))
         self.actionYAST_Help.setText(_translate("MainWindow", "YAST Help", None))
+
+
+if __name__ == "__main__":
+    import sys
+    app = QtGui.QApplication(sys.argv)
+    MainWindow = QtGui.QMainWindow()
+    ui = Ui_MainWindow()
+    ui.setupUi(MainWindow)
+    MainWindow.show()
+    sys.exit(app.exec_())
 
