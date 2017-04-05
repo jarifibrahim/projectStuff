@@ -61,11 +61,11 @@ class TokenizationThread(LogFile, QtCore.QThread):
 
     def __init__(self, file_path, f_type):
         super(TokenizationThread, self).__init__(file_path)
-        self.number_of_lines = self._count_lines()
         if self.file_type != f_type:
             logging.error("Incorrect file type. Detected type: %d, selected "
                           "type: %d" % (self.file_type, f_type))
             raise TypeError
+        self.number_of_lines = self._count_lines()
         self.one_percentage = self.number_of_lines // 100
 
     def _count_lines(self):

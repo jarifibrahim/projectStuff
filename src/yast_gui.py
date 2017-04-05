@@ -1,6 +1,7 @@
 from PyQt4 import QtGui, QtCore
 from ui_mainwindow import Ui_MainWindow
 import sys
+import atexit
 import logging
 import settings
 from yast import TokenizationThread, FilteringThread, SessionThread
@@ -188,8 +189,8 @@ class YastGui(QtGui.QMainWindow):
         self.timer = QtCore.QElapsedTimer()
         self.timer.start()
 
-        ignore_list = self.ui.ignore_ext_lineEdit.text().split(",")
-
+        ignore_str = self.ui.ignore_ext_lineEdit.text().split(",")
+        ignore_list = [x.replace(".", "").strip() for x in ignore_str]
         self.filter_thread = FilteringThread(self.file_path, ignore_list)
         logging.info("Filter thread created")
         self.filter_thread.started.connect(self.filter_started)
@@ -288,6 +289,7 @@ class YastGui(QtGui.QMainWindow):
 
 
 def main():
+    atexit.register(db_delete)
     logging.basicConfig(
         filename='yast.log', level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
@@ -298,6 +300,10 @@ def main():
     gui.show()
     sys.exit(app.exec_())
 
+
+def db_delete():
+    import os
+    os.remove(settings.DATABASE_NAME)
 
 if __name__ == '__main__':
     main()
